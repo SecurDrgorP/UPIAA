@@ -1,0 +1,442 @@
+<div class="sidebar-panel w-80 h-full flex flex-col animate-slide-in-right shrink-0 overflow-hidden relative"
+    (click)="$event.stopPropagation()">
+
+    <!-- Lock Overlay (when execution is active) -->
+    <div *ngIf="isLocked" class="absolute inset-x-0 bottom-0 top-14 z-50 bg-surface-900/40 backdrop-blur-[1px]"
+        title="Configuration locked during execution"></div>
+
+    <!-- Header -->
+    <div class="px-4 py-3 border-b border-surface-800/60 flex items-center justify-between shrink-0">
+        <div class="flex items-center gap-2">
+            <span class="text-lg">{{ getNodeIcon(node.data.type) }}</span>
+            <div>
+                <h3 class="text-sm font-semibold text-surface-100">Node Config</h3>
+                <span class="text-[10px] font-mono text-surface-500">{{ node.id }}</span>
+            </div>
+        </div>
+        <div class="flex items-center gap-2">
+            <span *ngIf="isLocked" class="text-xs text-accent-light px-2 py-0.5 rounded bg-accent-light/10">🔒
+                Locked</span>
+            <button class="text-surface-500 hover:text-surface-200 transition-colors text-sm p-1"
+                (click)="close.emit()">
+                ✕
+            </button>
+        </div>
+    </div>
+
+    <!-- Status Badge -->
+    <div class="px-4 py-2 border-b border-surface-800/40 shrink-0">
+        <div class="flex items-center gap-2">
+            <div class="w-2 h-2 rounded-full" [style.background-color]="node.data.status === 'success' ? '#10b981' :
+                                     node.data.status === 'error'   ? '#ef4444' :
+                                     node.data.status === 'running' ? '#6366f1' : '#475569'">
+            </div>
+            <span class="text-xs font-medium" [class.text-success]="node.data.status === 'success'"
+                [class.text-danger]="node.data.status === 'error'"
+                [class.text-accent-light]="node.data.status === 'running'"
+                [class.text-surface-400]="node.data.status === 'idle'">
+                {{ (node.data.status || 'idle') | titlecase }}
+            </span>
+            <span class="text-[10px] text-surface-600 ml-auto font-mono">{{ node.data.type }}</span>
+        </div>
+    </div>
+
+    <!-- Node Label -->
+    <div *ngIf="node.data.type !== 'group' && node.data.type !== 'comment'" class="px-4 py-3 border-b border-surface-800/40 shrink-0">
+        <label class="form-label">Node Label</label>
+        <div class="flex gap-2">
+            <input class="form-input flex-1" [(ngModel)]="editLabel" placeholder="Node name..."
+                (keyup.enter)="applyLabel()" />
+            <button class="toolbar-btn text-xs py-1 px-3" (click)="applyLabel()">Set</button>
+        </div>
+    </div>
+
+    <!-- Tabs: Config / Input / Output -->
+    <div *ngIf="node.data.type !== 'group' && node.data.type !== 'comment'" class="flex border-b border-surface-800/40 shrink-0">
+        <button class="flex-1 py-2 text-xs font-semibold uppercase tracking-wider transition-colors"
+            [class.text-accent-light]="activeTab === 'config'" [class.text-surface-500]="activeTab !== 'config'"
+            [class.border-b-2]="activeTab === 'config'" [class.border-accent]="activeTab === 'config'"
+            (click)="activeTab = 'config'">
+            ⚙️ Config
+        </button>
+        <button class="flex-1 py-2 text-xs font-semibold uppercase tracking-wider transition-colors"
+            [class.text-accent-light]="activeTab === 'input'" [class.text-surface-500]="activeTab !== 'input'"
+            [class.border-b-2]="activeTab === 'input'" [class.border-accent]="activeTab === 'input'"
+            (click)="activeTab = 'input'">
+            📥 Input
+        </button>
+        <button class="flex-1 py-2 text-xs font-semibold uppercase tracking-wider transition-colors"
+            [class.text-accent-light]="activeTab === 'output'" [class.text-surface-500]="activeTab !== 'output'"
+            [class.border-b-2]="activeTab === 'output'" [class.border-accent]="activeTab === 'output'"
+            (click)="activeTab = 'output'">
+            📤 Output
+        </button>
+    </div>
+
+    <!-- Tab Content -->
+    <div class="flex-1 overflow-y-auto">
+
+        <!-- ═══════════════════════ Placeholder for Canvas Visual Elements ═══════════════════════ -->
+        <div *ngIf="(node.data.type === 'group' || node.data.type === 'comment')" class="p-8 flex flex-col items-center justify-center text-center h-full mt-12">
+            <span class="text-4xl mb-4 opacity-50">🎨</span>
+            <p class="text-surface-400 text-sm italic">Visual element properties are edited directly on the canvas.</p>
+        </div>
+
+        <!-- ═══════════════════════ Config Tab — Universal Auto-Renderer ═══════════════════════ -->
+        <div *ngIf="activeTab === 'config' && node.data.type !== 'group' && node.data.type !== 'comment'" class="p-4 space-y-4">
+
+            <!-- Node type header -->
+            <div class="flex items-center justify-between">
+                <div class="text-[10px] font-bold text-surface-500 uppercase tracking-widest">
+                    {{ getNodeIcon(node.data.type) }} {{ node.data.type | titlecase }}
+                </div>
+                <button class="text-[10px] px-2 py-1 rounded border transition-colors"
+                    [class.border-accent]="showDocs" [class.text-accent-light]="showDocs"
+                    [class.border-surface-700]="!showDocs" [class.text-surface-500]="!showDocs"
+                    (click)="fetchNodeDocs()">
+                    📖 Docs
+                </button>
+            </div>
+
+            <!-- Docs panel (collapsible) -->
+            <div *ngIf="showDocs" class="p-3 bg-surface-800/40 rounded-lg border border-surface-700/50 animate-fade-in">
+                <pre class="text-[10px] font-mono text-surface-300 whitespace-pre-wrap leading-relaxed max-h-48 overflow-y-auto">{{ nodeDoc || 'Loading...' }}</pre>
+            </div>
+
+            <!-- If/Else special: branch preview (non-config display) -->
+            <ng-container *ngIf="node.data.type === 'if_else'">
+                <div class="grid grid-cols-2 gap-3 mb-2">
+                    <div class="p-2 border border-surface-800 bg-surface-900/50 rounded-lg">
+                        <label class="text-[10px] text-success font-semibold uppercase tracking-tight block mb-1">True Branch</label>
+                        <div class="text-xs font-mono text-surface-200 truncate">{{ getBranchTarget('true') }}</div>
+                    </div>
+                    <div class="p-2 border border-surface-800 bg-surface-900/50 rounded-lg">
+                        <label class="text-[10px] text-danger font-semibold uppercase tracking-tight block mb-1">False Branch</label>
+                        <div class="text-xs font-mono text-surface-200 truncate">{{ getBranchTarget('false') }}</div>
+                    </div>
+                </div>
+                <div class="text-[10px] text-surface-600 italic mb-2">Branching is automated based on canvas connections.</div>
+            </ng-container>
+
+            <!-- For Loop special: mechanism info -->
+            <ng-container *ngIf="node.data.type === 'for_loop'">
+                <div class="p-3 bg-accent/10 rounded-lg border border-accent/20 text-[11px] leading-relaxed text-surface-300 mb-2">
+                    <span class="font-bold text-accent-light">Mechanism:</span> A For Loop iterates through a collection of items.
+                    Use <code class="bg-surface-800 px-1 rounded text-accent-light" ngNonBindable>{{$item}}</code> in body nodes to access the current
+                    item, <code class="bg-surface-800 px-1 rounded text-accent-light" ngNonBindable>{{$index}}</code> for the index, and
+                    <code class="bg-surface-800 px-1 rounded text-accent-light" ngNonBindable>{{$total}}</code> for the total count.
+                </div>
+            </ng-container>
+
+
+            <!-- ════════════════════════════════════════════════════════════
+                 UNIVERSAL AUTO-RENDERED FIELDS
+                 Reads from buildConfigFields() — works for ALL node types
+                 ════════════════════════════════════════════════════════════ -->
+            <ng-container *ngFor="let field of cachedFields; trackBy: trackByField">
+                <div *ngIf="isFieldVisible(field)" class="sidebar-section p-3 bg-surface-800/20 rounded-lg space-y-2 border border-surface-800/40">
+
+                    <!-- Label -->
+                    <label class="form-label flex items-center gap-1">
+                        {{ field.label }}
+                        <span *ngIf="field.required" class="text-red-400 font-bold">*</span>
+                        <span *ngIf="field.template" class="ml-1 text-accent-light cursor-help opacity-80" title="Supports template interpolation">❴❵</span>
+                        <span *ngIf="field.dotpath" class="ml-1 text-accent-light cursor-help opacity-80" title="Supports dot-path resolution">⚬</span>
+                    </label>
+
+                    <!-- ── string ── -->
+                    <ng-container *ngIf="field.type === 'string' && !field.secret && !field.multiline && !field.options">
+                        <input class="form-input" [class.font-mono]="field.template || field.dotpath"
+                            [(ngModel)]="node.data.config[field.key]"
+                            [placeholder]="field.placeholder || (field.template ? 'e.g. ' + '{{' + '$node.n1.response' + '}}' : field.dotpath ? 'e.g. n1.items' : '')"
+                            (ngModelChange)="onConfigChange()" />
+                    </ng-container>
+
+                    <!-- ── string (multiline) ── -->
+                    <ng-container *ngIf="field.type === 'string' && field.multiline && !field.secret">
+                        <textarea class="form-input text-xs leading-relaxed" rows="3"
+                            [(ngModel)]="node.data.config[field.key]"
+                            [placeholder]="field.placeholder || (field.template ? 'e.g. Summarize: ' + '{{' + '$node.n1.response' + '}}' : '')"
+                            (ngModelChange)="onConfigChange()"></textarea>
+                    </ng-container>
+
+                    <!-- ── string (secret / password) ── -->
+                    <ng-container *ngIf="field.secret">
+                        <div class="relative">
+                            <input [type]="secretVisibility[field.key] ? 'text' : 'password'" class="form-input pr-10"
+                                [(ngModel)]="node.data.config[field.key]"
+                                [placeholder]="field.placeholder"
+                                (ngModelChange)="onConfigChange()" />
+                            <button type="button"
+                                class="absolute right-2 top-1/2 -translate-y-1/2 text-surface-400 hover:text-surface-200 text-xs p-1"
+                                (click)="toggleSecretVisibility(field.key)">
+                                {{ secretVisibility[field.key] ? '🙈' : '👁️' }}
+                            </button>
+                        </div>
+                    </ng-container>
+
+                    <!-- ── number ── -->
+                    <ng-container *ngIf="field.type === 'number'">
+                        <input type="number" class="form-input"
+                            [ngModel]="node.data.config[field.key]"
+                            [attr.min]="field.min"
+                            [attr.max]="field.max"
+                            [placeholder]="field.placeholder"
+                            (ngModelChange)="onFieldChange(field.key, $event, 'number')" />
+                    </ng-container>
+
+                    <!-- ── boolean ── -->
+                    <ng-container *ngIf="field.type === 'boolean'">
+                        <div class="flex items-center justify-between py-1">
+                            <span class="text-xs text-surface-200">{{ field.description || 'Enabled' }}</span>
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" class="sr-only peer"
+                                    [(ngModel)]="node.data.config[field.key]"
+                                    (ngModelChange)="onConfigChange()">
+                                <div class="w-8 h-4 bg-surface-700 peer-focus:outline-none rounded-full peer
+                                    peer-checked:after:translate-x-full peer-checked:after:border-white
+                                    after:content-[''] after:absolute after:top-[2px] after:left-[2px]
+                                    after:bg-white after:border-gray-300 after:border after:rounded-full
+                                    after:h-3 after:w-3 after:transition-all peer-checked:bg-accent"></div>
+                            </label>
+                        </div>
+                    </ng-container>
+
+                    <!-- ── select ── -->
+                    <ng-container *ngIf="field.type === 'select' && field.options">
+                        <select class="form-input"
+                            [value]="node.data.config[field.key] ?? field.default ?? ''"
+                            (change)="onSelectChange(field.key, $any($event.target).value)">
+                            <option *ngFor="let opt of field.options"
+                                [value]="opt.value"
+                                [selected]="(node.data.config[field.key] ?? field.default) === opt.value">
+                                {{ opt.label }}
+                            </option>
+                        </select>
+                    </ng-container>
+
+                    <!-- ── multiselect ── -->
+                    <ng-container *ngIf="field.type === 'multiselect' && field.options">
+                        <div class="flex flex-wrap gap-2">
+                            <label *ngFor="let opt of field.options"
+                                class="flex items-center gap-1.5 px-2 py-1 rounded border text-xs cursor-pointer transition-all"
+                                [class.border-accent]="isMultiselectChecked(field.key, opt.value)"
+                                [class.text-accent-light]="isMultiselectChecked(field.key, opt.value)"
+                                [class.border-surface-700]="!isMultiselectChecked(field.key, opt.value)"
+                                [class.text-surface-400]="!isMultiselectChecked(field.key, opt.value)"
+                                [style.background]="isMultiselectChecked(field.key, opt.value) ? 'rgba(99,102,241,0.1)' : 'transparent'">
+                                <input type="checkbox" class="sr-only"
+                                    [checked]="isMultiselectChecked(field.key, opt.value)"
+                                    (change)="onMultiselectToggle(field.key, opt.value, $any($event.target).checked)" />
+                                {{ opt.label }}
+                            </label>
+                        </div>
+                    </ng-container>
+
+                    <!-- ── object / json ── -->
+                    <ng-container *ngIf="field.type === 'object' || field.type === 'json'">
+                        <textarea class="form-input font-mono text-[10px]" rows="3"
+                            [ngModel]="node.data.config[field.key] | json"
+                            (ngModelChange)="onFieldChange(field.key, $event, 'json')"
+                            spellcheck="false"
+                            placeholder="&#123;&#125;"></textarea>
+                    </ng-container>
+
+                    <!-- ── code (output mapping, etc.) ── -->
+                    <ng-container *ngIf="field.type === 'code'">
+                        <textarea class="form-input font-mono text-[10px]" rows="2"
+                            [(ngModel)]="node.data.config[field.key]"
+                            (ngModelChange)="onConfigChange()"
+                            spellcheck="false"
+                            placeholder="&#123;&quot;new_key&quot;: &quot;old_key&quot;&#125;"></textarea>
+                    </ng-container>
+
+                    <!-- ── array (fallback as JSON) ── -->
+                    <ng-container *ngIf="field.type === 'array'">
+                        <textarea class="form-input font-mono text-[10px]" rows="2"
+                            [ngModel]="node.data.config[field.key] | json"
+                            (ngModelChange)="onFieldChange(field.key, $event, 'json')"
+                            spellcheck="false"
+                            [placeholder]="field.placeholder || '[]'"></textarea>
+                    </ng-container>
+
+                    <!-- ── file upload ── -->
+                    <ng-container *ngIf="field.type === 'file'">
+                        <div class="flex items-center gap-2">
+                            <label class="toolbar-btn primary text-xs cursor-pointer flex items-center gap-1.5 flex-1 justify-center"
+                                [class.opacity-50]="uploading">
+                                <span *ngIf="!uploading">📂 Upload File</span>
+                                <span *ngIf="uploading">⏳ Uploading...</span>
+                                <input type="file" class="hidden"
+                                    accept=".pkl,.joblib,.onnx,.h5,.keras,.pt,.pth"
+                                    (change)="uploadModel($event)"
+                                    [disabled]="uploading" />
+                            </label>
+                        </div>
+                        <div *ngIf="node.data.config[field.key]" class="text-[9px] text-accent-light font-mono mt-1 truncate">
+                            ✅ {{ node.data.config[field.key] }}
+                        </div>
+                    </ng-container>
+
+                    <!-- Description hint -->
+                    <div *ngIf="field.description && field.type !== 'boolean'" class="text-[9px] text-surface-500 italic mt-1">{{ field.description }}</div>
+
+                    <!-- Dynamic expression picker for template and dotpath fields -->
+                    <ng-container *ngIf="field.template || field.dotpath">
+                        <button
+                            class="flex items-center gap-1 text-[10px] text-accent-light/70 hover:text-accent-light mt-1 transition-colors"
+                            (click)="toggleExpressionPicker(field.key)">
+                            <span>🔍</span>
+                            <span>{{ activeExpressionPicker === field.key ? 'Close' : 'Insert expression' }}</span>
+                            <span *ngIf="expressionHints.length > 0" class="text-[9px] text-surface-500">({{ expressionHints.length }} available)</span>
+                        </button>
+
+                        <div *ngIf="activeExpressionPicker === field.key" class="mt-1.5 border border-surface-700/60 rounded-lg bg-surface-900/80 overflow-hidden">
+                            <!-- No expressions available -->
+                            <div *ngIf="expressionHints.length === 0" class="px-3 py-2 text-[10px] text-surface-500 italic">
+                                No upstream data yet — connect a node above and run the workflow once to populate expressions.
+                            </div>
+
+                            <!-- Expression list -->
+                            <div *ngFor="let hint of expressionHints"
+                                class="flex flex-col gap-0.5 px-3 py-2 hover:bg-surface-700/50 cursor-pointer transition-colors border-b border-surface-800/40 last:border-0"
+                                (click)="insertExpression(field.key, hint.expr)">
+                                <div class="flex items-center justify-between gap-2">
+                                    <code class="text-[10px] font-mono text-accent-light truncate flex-1">{{ hint.expr }}</code>
+                                    <span class="text-[9px] text-surface-500 shrink-0">{{ hint.label }}</span>
+                                </div>
+                                <div *ngIf="hint.preview" class="text-[9px] font-mono text-surface-500 truncate pl-1 border-l border-surface-700">
+                                    {{ hint.preview }}
+                                </div>
+                            </div>
+
+                            <!-- Manual entry fallback -->
+                            <div class="px-3 py-1.5 border-t border-surface-700/60 text-[9px] text-surface-600 italic">
+                                Or type manually: <span class="text-accent-light/60 font-mono select-all" ngNonBindable>{{node_id.field}}</span>
+                            </div>
+                        </div>
+                    </ng-container>
+                </div>
+            </ng-container>
+
+            <!-- No fields fallback -->
+            <div *ngIf="cachedFields.length === 0" class="text-[10px] text-surface-500 italic py-4 text-center">
+                No configuration schema available for this node type.
+            </div>
+
+            <!-- Raw JSON Editor (collapsible — power users only) -->
+            <div class="border-t border-surface-800/50 pt-3 mt-4">
+                <button class="flex items-center gap-2 text-[10px] text-surface-500 uppercase tracking-widest font-bold hover:text-surface-300 transition-colors w-full"
+                    (click)="showRawJson = !showRawJson">
+                    <span class="transition-transform" [class.rotate-90]="showRawJson">▶</span>
+                    Raw JSON Editor
+                </button>
+                <div *ngIf="showRawJson" class="mt-3 space-y-2">
+                    <textarea class="form-input font-mono text-xs leading-relaxed" rows="8" [(ngModel)]="configJson"
+                        spellcheck="false" (input)="jsonError = ''"></textarea>
+                    <div *ngIf="jsonError" class="text-danger text-xs font-medium">{{ jsonError }}</div>
+                    <button class="toolbar-btn primary w-full justify-center" (click)="applyConfig()">
+                        Apply Raw JSON
+                    </button>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- ═══════════════════════ Input Tab ═══════════════════════ -->
+        <div *ngIf="activeTab === 'input' && node.data.type !== 'group' && node.data.type !== 'comment'" class="p-4 space-y-4">
+
+            <!-- Expression Hints -->
+            <div *ngIf="expressionHints.length > 0" class="space-y-2">
+                <div class="text-[10px] font-bold text-surface-500 uppercase tracking-widest">📋 Available Expressions
+                </div>
+                <div class="text-xs text-surface-400 mb-2">Click to copy. Paste into any config field.</div>
+                <div *ngFor="let hint of expressionHints"
+                    class="flex flex-col gap-1 px-2 py-2 rounded bg-surface-800/60 hover:bg-surface-700/60 cursor-pointer transition-colors group"
+                    (click)="copyExpression(hint.expr)">
+                    <div class="flex items-center gap-2">
+                        <code class="text-[11px] font-mono text-accent-light flex-1 truncate">{{ hint.expr }}</code>
+                        <span class="text-[10px] text-surface-500 group-hover:text-surface-300">{{ hint.label }}</span>
+                        <span class="text-[10px] text-surface-600 opacity-0 group-hover:opacity-100">📋</span>
+                    </div>
+                    <div *ngIf="hint.preview"
+                        class="text-[9px] font-mono text-surface-500 truncate pl-1 border-l border-surface-700">
+                        Value: <span class="text-surface-400">{{ hint.preview }}</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Upstream Nodes -->
+            <div *ngIf="upstreamNodes.length > 0" class="space-y-2">
+                <div class="text-[10px] font-bold text-surface-500 uppercase tracking-widest">🔗 Upstream Nodes</div>
+                <div *ngFor="let up of upstreamNodes" class="rounded bg-surface-800/40 p-2">
+                    <div class="flex items-center gap-2 mb-1">
+                        <span class="text-xs font-medium text-surface-200">{{ up.label }}</span>
+                        <span class="text-[10px] font-mono text-surface-600">{{ up.id }}</span>
+                    </div>
+                    <pre *ngIf="up.result"
+                        class="text-[11px] font-mono text-surface-400 whitespace-pre-wrap leading-relaxed max-h-32 overflow-y-auto">{{ up.result | json }}</pre>
+                    <div *ngIf="!up.result" class="text-[11px] text-surface-600 italic">Not executed yet</div>
+                </div>
+            </div>
+
+            <!-- No upstream -->
+            <div *ngIf="upstreamNodes.length === 0" class="text-center py-8">
+                <div class="text-2xl mb-2">🔌</div>
+                <div class="text-xs text-surface-500">No upstream connections</div>
+                <div class="text-[10px] text-surface-600 mt-1">Connect a node's output to this node's input to pass data
+                </div>
+            </div>
+
+            <!-- Merged Input Data -->
+            <div *ngIf="upstreamNodes.length > 0">
+                <div class="text-[10px] font-bold text-surface-500 uppercase tracking-widest mb-1">📦 Merged Input Data
+                </div>
+                <pre
+                    class="form-input font-mono text-xs leading-relaxed whitespace-pre-wrap min-h-[80px] text-surface-300 max-h-48 overflow-y-auto">{{ getInputJson() }}</pre>
+            </div>
+        </div>
+
+        <!-- ═══════════════════════ Output Tab ═══════════════════════ -->
+        <div *ngIf="activeTab === 'output' && node.data.type !== 'group' && node.data.type !== 'comment'" class="p-4 space-y-4">
+            
+            <!-- Example Output Schema (Pre-execution) -->
+            <div>
+                <div class="flex items-center gap-2 mb-2">
+                    <label class="form-label mb-0">Example Output</label>
+                    <span class="text-[9px] px-1.5 py-0.5 bg-accent/20 text-accent-light rounded font-bold uppercase tracking-widest">Reference</span>
+                </div>
+                <div class="text-[10px] text-surface-500 mb-2">
+                    Downstream nodes can reference these fields using
+                    <code class="text-accent-light mx-0.5 bg-surface-800 px-1 rounded">{{ '{{' + node.id + '.field}}' }}</code>
+                    (short form, recommended) or
+                    <code class="text-accent-light mx-0.5 bg-surface-800 px-1 rounded">{{ '{{$node.' + node.id + '.field}}' }}</code>
+                    (long form).
+                </div>
+                <pre class="form-input font-mono text-[11px] leading-relaxed whitespace-pre-wrap min-h-[100px] text-surface-400 bg-surface-800/30">{{ getExampleOutputJson() }}</pre>
+            </div>
+
+            <hr class="border-surface-800/50">
+
+            <!-- Actual Execution Result -->
+            <div>
+                <div class="flex items-center gap-2 mb-2">
+                    <label class="form-label mb-0">Execution Result</label>
+                    <span *ngIf="node.data.result" class="text-[9px] px-1.5 py-0.5 bg-success/20 text-success rounded font-bold uppercase tracking-widest">Live</span>
+                </div>
+                <pre class="form-input font-mono text-[11px] leading-relaxed whitespace-pre-wrap min-h-[150px]"
+                    [class.text-surface-300]="node.data.result"
+                    [class.text-surface-600]="!node.data.result"
+                    [class.italic]="!node.data.result">{{ getResultJson() }}</pre>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer Actions -->
+    <div class="px-4 py-3 border-t border-surface-800/40 shrink-0">
+        <button class="toolbar-btn w-full justify-center text-danger border-danger/30 hover:bg-danger/10"
+            (click)="deleteNode.emit()">
+            🗑️ Delete Node
+        </button>
+    </div>
+</div>

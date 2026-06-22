@@ -1,0 +1,7 @@
+node_modules
+dist
+.angular
+.venv
+__pycache__
+*.pyc
+.git

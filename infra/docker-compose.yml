@@ -1,0 +1,187 @@
+# ═══════════════════════════════════════════════════════════════════════════════
+# M8M Production Docker Compose — 7 services with health checks
+# Includes systems service for AI subsystems (System 1–4)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+services:
+  # ── PostgreSQL ──────────────────────────────────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-m8m}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-m8m_secret}
+      POSTGRES_DB: ${POSTGRES_DB:-m8m}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+      - ./postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-m8m}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  # ── Redis ───────────────────────────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  # ── Temporal Server ─────────────────────────────────────────────────────────
+  temporal:
+    image: temporalio/auto-setup:latest
+    restart: unless-stopped
+    environment:
+      - DB=postgres12
+      - DB_PORT=5432
+      - POSTGRES_USER=${POSTGRES_USER:-m8m}
+      - POSTGRES_PWD=${POSTGRES_PASSWORD:-m8m_secret}
+      - POSTGRES_SEEDS=postgres
+    ports:
+      - "7233:7233"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "tctl", "--address", "temporal:7233", "cluster", "health"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  # ── Backend API ─────────────────────────────────────────────────────────────
+  backend:
+    build:
+      context: ../backend
+      dockerfile: Dockerfile
+      target: production
+    restart: unless-stopped
+    env_file: ../.env
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-m8m}:${POSTGRES_PASSWORD:-m8m_secret}@postgres:5432/${POSTGRES_DB:-m8m}
+      TEMPORAL_HOST: temporal:7233
+      REDIS_URL: redis://redis:6379/0
+      SECRET_VAULT_KEY: ${SECRET_VAULT_KEY:-change-me-in-production}
+      SYSTEMS_URL: http://systems:8001
+      INTERNAL_SECRET: ${INTERNAL_SECRET:-change-me-internal}
+    volumes:
+      - model_storage:/app/storage/models
+      - ../backend/ai_nodes:/app/ai_nodes
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      temporal:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "python", "-c", "import httpx; httpx.get('http://localhost:8000/api/health').raise_for_status()"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+
+  # ── Systems Service (AI Subsystems) ─────────────────────────────────────────
+  systems:
+    build: ../systems
+    restart: unless-stopped
+    env_file: ../.env
+    environment:
+      OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://host.docker.internal:11434}
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-llama3.1}
+      BACKEND_URL: http://backend:8000
+      BACKEND_RELOAD_URL: http://backend:8000/internal/registry/reload
+      NODES_DIR: /shared/ai_nodes
+      BACKEND_DIR: /shared/backend
+      INTERNAL_SECRET: ${INTERNAL_SECRET:-change-me-internal}
+    volumes:
+      - ../backend/ai_nodes:/shared/ai_nodes
+      - ../backend:/shared/backend:ro
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      backend:
+        condition: service_healthy
+    ports:
+      - "${SYSTEMS_PORT:-8001}:8001"
+
+  # ── Temporal Worker ─────────────────────────────────────────────────────────
+  temporal-worker:
+    build:
+      context: ../backend
+      dockerfile: Dockerfile
+      target: production
+    restart: on-failure:5
+    env_file: ../.env
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-m8m}:${POSTGRES_PASSWORD:-m8m_secret}@postgres:5432/${POSTGRES_DB:-m8m}
+      TEMPORAL_HOST: temporal:7233
+      REDIS_URL: redis://redis:6379/0
+      SECRET_VAULT_KEY: ${SECRET_VAULT_KEY:-change-me-in-production}
+      WORKER_MAX_CONCURRENT_ACTIVITIES: ${WORKER_MAX_CONCURRENT_ACTIVITIES:-20}
+      SYSTEMS_URL: http://systems:8001
+      INTERNAL_SECRET: ${INTERNAL_SECRET:-change-me-internal}
+    volumes:
+      - model_storage:/app/storage/models
+      - ../backend/ai_nodes:/app/ai_nodes
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    command: python worker.py
+    depends_on:
+      postgres:
+        condition: service_healthy
+      temporal:
+        condition: service_started
+
+  # ── Frontend (Nginx) ───────────────────────────────────────────────────────
+  frontend:
+    build:
+      context: ../frontend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:80"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  # ── Nginx Reverse Proxy ────────────────────────────────────────────────────
+  nginx:
+    image: nginx:1.25-alpine
+    restart: unless-stopped
+    ports:
+      - "${NGINX_PORT:-80}:80"
+      - "${NGINX_SSL_PORT:-443}:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      backend:
+        condition: service_healthy
+      frontend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:80/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+volumes:
+  pg_data:
+  redis_data:
+  model_storage:

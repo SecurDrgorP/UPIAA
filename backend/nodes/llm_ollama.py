@@ -1,0 +1,231 @@
+"""
+nodes/llm_ollama.py
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🦙  Ollama Action — Local LLM Inference
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+WHAT THIS NODE DOES
+───────────────────
+Sends a prompt to a locally running Ollama server and returns the model's
+response.  Supports system prompts, temperature control, and output mapping.
+
+QUICK START
+───────────
+  1. Ensure Ollama is running (default: http://host.docker.internal:11434).
+  2. Choose a model (e.g. llama3.1, mistral, codellama).
+  3. Write your prompt using {{expression}} syntax to inject upstream data.
+  4. (Optional) Add a system prompt to set the model's behaviour.
+
+OUTPUT FIELDS
+─────────────
+  response          The model's text response (auto-parsed as JSON if valid)
+  model             The model name used
+  input_tokens      Number of prompt tokens consumed
+  output_tokens     Number of tokens generated
+  finish_reason     Why generation stopped ("stop" or "unknown")
+
+ARCHITECTURAL NOTES
+───────────────────
+  • Response text is auto-parsed as JSON when possible, so downstream
+    nodes can access structured fields directly.
+  • If the prompt template resolves to empty, an explicit error is
+    returned instead of silently dumping raw input_data.
+"""
+from typing import Any, Optional, Dict
+import httpx
+from core.node_registry import register_action
+from core.expressions import resolve_template, apply_output_mapping
+from core.llm_factory import get_llm_provider
+import json
+import re
+
+
+def _try_parse_json(text: str) -> Any:
+    """
+    Parse a string as JSON, handling common LLM formatting issues:
+    - Markdown code fences: ```json ... ``` or ``` ... ```
+    - Leading/trailing whitespace and newlines
+    - Single-line JSON embedded in prose (extracts first {...} or [...] block)
+    Returns the parsed object on success, or the original string on failure.
+    """
+    if not text or not isinstance(text, str):
+        return text
+
+    cleaned = text.strip()
+
+    # Strip markdown code fences: ```json ... ``` or ``` ... ```
+    fence_match = re.match(
+        r"^```(?:json)?\s*\n?(.*?)\n?```\s*$", cleaned, re.DOTALL
+    )
+    if fence_match:
+        cleaned = fence_match.group(1).strip()
+
+    # Try direct parse first
+    try:
+        return json.loads(cleaned)
+    except (json.JSONDecodeError, ValueError):
+        pass
+
+    # Try to extract the first JSON object or array from mixed prose
+    for pattern in (r"\{.*\}", r"\[.*\]"):
+        match = re.search(pattern, cleaned, re.DOTALL)
+        if match:
+            try:
+                return json.loads(match.group(0))
+            except (json.JSONDecodeError, ValueError):
+                pass
+
+    return text   # Return original string — not JSON
+
+class OllamaProvider:
+    def __init__(self, base_url: str, model: str, timeout: int = 120):
+        self.base_url = base_url.rstrip("/")
+        self.model = model
+        self.timeout = timeout
+
+    async def generate(self, prompt: str, system: Optional[str] = None, temperature: float = 0.7, **kwargs) -> Dict[str, Any]:
+        payload = {
+            "model": self.model,
+            "prompt": prompt,
+            "stream": False,
+            "options": {"temperature": temperature, **kwargs},
+        }
+        if system:
+            payload["system"] = system
+
+        try:
+            async with httpx.AsyncClient(timeout=self.timeout) as client:
+                resp = await client.post(f"{self.base_url}/api/generate", json=payload)
+                if resp.status_code == 200:
+                    data = resp.json()
+                    response_text = data.get("response") or ""
+                    
+                    parsed_response = _try_parse_json(response_text)
+                    return {
+                        "response": parsed_response,
+                        "model": self.model,
+                        "input_tokens": data.get("prompt_eval_count", 0),
+                        "output_tokens": data.get("eval_count", 0),
+                        "finish_reason": "stop" if data.get("done") else "unknown"
+                    }
+                return {"response": "", "error": f"Ollama error {resp.status_code}: {resp.text}"}
+        except Exception as e:
+            return {"response": "", "error": str(e)}
+
+@register_action(
+    type="ollama_action",
+    label="Ollama Action",
+    icon="🦙",
+    description="Execute a task using a local Ollama LLM",
+    category="LLM Actions",
+    is_llm_type=True,
+    config_schema={
+        "ollama_url": {
+            "type": "string",
+            "label": "Ollama URL",
+            "default": "http://host.docker.internal:11434",
+            "placeholder": "http://host.docker.internal:11434",
+            "description": "Base URL of your Ollama server.",
+        },
+        "model": {
+            "type": "string",
+            "label": "Model Name",
+            "default": "llama3.1",
+            "placeholder": "llama3.1",
+            "description": "The Ollama model to use (e.g. llama3.1, mistral, codellama).",
+        },
+        "prompt_template": {
+            "type": "string",
+            "label": "Prompt",
+            "multiline": True,
+            "template": True,
+            "placeholder": "Summarize the following: {{$input.text}}",
+            "description": (
+                "The prompt sent to the model. Supports {{expression}} interpolation to inject "
+                "values from upstream nodes.\n\n"
+                "── How to reference upstream data ──────────────────────\n"
+                "  Short form (recommended):\n"
+                "    {{node_3.response}}              — top-level field\n"
+                "    {{node_3.messages[0].content}}   — array element + subfield\n"
+                "    {{node_3.data.title}}            — nested object field\n\n"
+                "  Long form (also works):\n"
+                "    {{$node.node_3.response}}\n"
+                "    {{$input.response}}              — flat-merged from all upstream nodes\n\n"
+                "── Where to find the node ID ───────────────────────────\n"
+                "  Click any upstream node — its ID (e.g. node_3) is shown in the sidebar header "
+                "in monospace below the title. Or switch to the Input tab to see all available "
+                "expressions with one-click insert.\n\n"
+                "── Common example: Discord bot ─────────────────────────\n"
+                "  {{node_3.messages[0].content}}   — first message's text\n"
+                "  {{node_3.messages[0].author_username}}  — who sent it\n"
+                "  NOT: {{node_3.messages.content}} — messages is a list, [0] is required\n\n"
+                "── Tip ─────────────────────────────────────────────────\n"
+                "  Leave blank to send the entire upstream output as the prompt.\n\n"
+                "── Accessing JSON responses downstream ──────────────────\n"
+                "  If your prompt instructs the model to respond in JSON,\n"
+                "  M8M auto-parses the response. Access fields with:\n"
+                "    {{node_2.response.key}}          — top-level JSON key\n"
+                "    {{node_2.response.items[0].val}} — array element\n"
+                "  If the model wraps JSON in code fences (```json...```)\n"
+                "  M8M strips them automatically.\n"
+                "  To embed the full JSON in a message: {{node_2.response}}\n"
+                "  This produces compact JSON, e.g.: {\"key\":\"value\"}\n"
+            ),
+        },
+        "system_prompt": {
+            "type": "string",
+            "label": "System Prompt",
+            "multiline": True,
+            "description": "Optional system instructions for the model.",
+        },
+        "temperature": {
+            "type": "number",
+            "label": "Temperature",
+            "default": 0.7,
+            "min": 0,
+            "max": 2,
+            "description": "Creativity level. Lower = more focused, higher = more creative.",
+        },
+        "inject_context": {
+            "type": "boolean",
+            "label": "Inject Execution Context",
+            "default": False,
+            "description": (
+                "When ON, wraps your system prompt with workflow metadata (node ID, upstream data, "
+                "loop context). Useful for advanced agent orchestration. "
+                "Leave OFF for standard chat use."
+            ),
+        },
+        "output_mapping": {
+            "type": "code",
+            "label": "Output mapping",
+            "required": False,
+            "description": '{"summary": "response"}',
+        },
+    },
+)
+async def handle_ollama(config: dict[str, Any], input_data: dict[str, Any], context: dict[str, Any]) -> dict[str, Any]:
+    ollama_url = config.get("ollama_url", "http://host.docker.internal:11434")
+    if not ollama_url:
+        return {"error": "missing field: ollama_url", "__input_error__": True}
+
+    model = config.get("model", "llama3.1")
+
+    prompt = config.get("prompt_template", "")
+    if not prompt.strip():
+        # No prompt provided — use full input as prompt
+        prompt = json.dumps(input_data)
+
+    system = config.get("system_prompt") or None
+
+    provider = get_llm_provider("ollama", {"ollama_url": ollama_url, "model": model})
+    result = await provider.generate(
+        prompt=prompt,
+        system=system.strip() if system else None,
+        temperature=config.get("temperature", 0.7)
+    )
+
+    if result.get("error"):
+        return {"error": f"LLM Provider failed: {result['error']}", "__input_error__": True}
+
+    return apply_output_mapping(result, config.get("output_mapping", ""))
