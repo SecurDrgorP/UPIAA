@@ -1,16 +1,20 @@
 import asyncio
+import json
 import logging
-import smtplib
 import os
+import smtplib
+from email import encoders
+from email.mime.base import MIMEBase
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
-from email.mime.base import MIMEBase
-from email import encoders
 from typing import Any
 from core.node_registry import register_action
 from core.expressions import resolve_template, apply_output_mapping
 
 logger = logging.getLogger(__name__)
+
+ALLOWED_DIR = "/tmp/m8m_docs/"
+
 
 async def execute_send_email(config: dict[str, Any], input_data: dict[str, Any]) -> dict[str, Any]:
     smtp_host = resolve_template(config.get("smtp_host", "smtp.gmail.com"), input_data)
@@ -21,7 +25,6 @@ async def execute_send_email(config: dict[str, Any], input_data: dict[str, Any])
     subject = resolve_template(config.get("subject", ""), input_data)
     body = resolve_template(config.get("body", ""), input_data)
     content_type = resolve_template(config.get("content_type", "plain"), input_data)
-    attachment_path = resolve_template(config.get("attachment_path", ""), input_data).strip()
 
     if not sender or not password:
         return {"error": "Email and App Password are required", "__input_error__": True}
@@ -34,29 +37,51 @@ async def execute_send_email(config: dict[str, Any], input_data: dict[str, Any])
     msg["Subject"] = subject
     msg.attach(MIMEText(body, content_type))
 
-    if attachment_path:
-        if attachment_path.startswith("/data/"):
-            attachment_path = "/app/uploads/" + attachment_path[6:]
-        elif "/" not in attachment_path and "\\" not in attachment_path:
-            attachment_path = "/app/uploads/" + attachment_path
-        
+    # ── Attachments (JSON array of file paths) ─────────────────────────────────
+    attached_files: list[str] = []
+    attachments_raw = resolve_template(config.get("attachments", ""), input_data).strip()
+
+    if attachments_raw:
         try:
-            import mimetypes
-            mime_type, _ = mimetypes.guess_type(attachment_path)
-            if mime_type is None:
-                mime_type = "application/octet-stream"
-            
-            maintype, subtype = mime_type.split("/", 1)
-            
-            with open(attachment_path, "rb") as att_file:
-                part = MIMEBase(maintype, subtype)
-                part.set_payload(att_file.read())
+            attachment_paths = json.loads(attachments_raw)
+        except (json.JSONDecodeError, TypeError):
+            return {
+                "error": (
+                    "attachments must be a valid JSON array of file paths, "
+                    f'e.g. ["/tmp/m8m_docs/report.docx"]. Got: {attachments_raw!r}'
+                ),
+                "__input_error__": True,
+            }
+
+        if not isinstance(attachment_paths, list):
+            return {
+                "error": "attachments must be a JSON array, not a single value.",
+                "__input_error__": True,
+            }
+
+        for fpath in attachment_paths:
+            fpath = str(fpath).strip()
+            if not fpath:
+                continue
+
+            real_path = os.path.realpath(fpath)
+            if not real_path.startswith(os.path.realpath(ALLOWED_DIR)):
+                return {
+                    "error": f"Attachment path must be under {ALLOWED_DIR}, got: {real_path}",
+                    "__input_error__": True,
+                }
+            if not os.path.isfile(real_path):
+                return {"error": f"Attachment not found: {real_path}", "__input_error__": True}
+
+            file_name = os.path.basename(real_path)
+            with open(real_path, "rb") as f:
+                part = MIMEBase("application", "octet-stream")
+                part.set_payload(f.read())
             encoders.encode_base64(part)
-            filename = os.path.basename(attachment_path)
-            part.add_header("Content-Disposition", f"attachment; filename={filename}")
+            part.add_header("Content-Disposition", f'attachment; filename="{file_name}"')
             msg.attach(part)
-        except Exception as e:
-            return {"error": f"Failed to attach file: {e}", "__service_error__": True}
+            attached_files.append(file_name)
+            logger.info(f"Attached file: {file_name}")
 
     def _send():
         with smtplib.SMTP(smtp_host, smtp_port, timeout=30) as server:
@@ -70,12 +95,17 @@ async def execute_send_email(config: dict[str, Any], input_data: dict[str, Any])
 
     await asyncio.get_event_loop().run_in_executor(None, _send)
 
-    return {
+    result: dict[str, Any] = {
         "sent": True,
         "from": sender,
         "to": recipients,
         "subject": subject,
     }
+    if attached_files:
+        result["attachment_count"] = len(attached_files)
+        result["attachments"] = attached_files
+
+    return result
 
 @register_action(
     type="send_email",
@@ -143,13 +173,17 @@ async def execute_send_email(config: dict[str, Any], input_data: dict[str, Any])
             ],
             "description": "Email body format.",
         },
-        "attachment_path": {
-            "type": "file",
-            "label": "Attachment Path (optional)",
+        "attachments": {
+            "type": "string",
+            "label": "Attachments (JSON array)",
             "required": False,
             "template": True,
-            "placeholder": "/tmp/m8m_docs/report.docx",
-            "description": "Path to a file to attach to the email. Supports template interpolation.",
+            "placeholder": '["/tmp/m8m_docs/{{node_d7.output_path}}"]',
+            "description": (
+                'JSON array of local file paths to attach. '
+                'Example: ["/tmp/m8m_docs/report.docx", "/tmp/m8m_docs/data.xlsx"]. '
+                'Files must be under /tmp/m8m_docs/. Supports {{expression}} interpolation.'
+            ),
         },
         "output_mapping": {
             "type": "code",
