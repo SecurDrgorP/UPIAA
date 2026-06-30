@@ -49,14 +49,26 @@ MAX_FILE_SIZE = 50 * 1024 * 1024  # 50 MB — Telegram Bot API limit for documen
     description="Send a local file as a document to a Telegram chat.",
     category="Communication",
     config_schema={
+        "credential_id": {
+            "type": "string",
+            "label": "Credential ID",
+            "required": False,
+            "placeholder": "cred_...",
+            "description": (
+                "Optional encrypted credential bundle ID. If set, the bundle "
+                "should provide bot_token."
+            ),
+        },
         "bot_token": {
             "type": "string",
             "label": "Bot Token",
-            "required": True,
+            "required": False,
             "secret": True,
             "placeholder": "123456789:AABBccDDeeFFggHHiiJJkkLLmmNNoo",
+            "visibleWhen": {"credential_id": ""},
             "description": (
-                "Your Telegram Bot token. Get it from @BotFather."
+                "Manual bot token — only needed when no credential bundle is "
+                "selected above. Get one from @BotFather on Telegram."
             ),
         },
         "chat_id": {

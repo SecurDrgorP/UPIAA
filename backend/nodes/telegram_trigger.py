@@ -36,6 +36,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import time
 from typing import Any
 
 import httpx
@@ -240,15 +241,19 @@ async def handle_telegram_trigger(
     # We maintain a single offset across all poll cycles.
     # Telegram guarantees messages are delivered in order; advancing the
     # offset (offset = last_update_id + 1) marks them as consumed.
+    # IMPORTANT: We must flush the final offset back to Telegram (via one
+    # extra getUpdates call with the advanced offset) before returning,
+    # otherwise the same message is re-delivered on the next run.
     #
     # Heartbeat strategy:
-    #   We track time_since_heartbeat and send a Temporal heartbeat every
-    #   HEARTBEAT_INTERVAL seconds regardless of whether a message arrived.
-    #   This keeps the Temporal activity alive during long quiet periods.
+    #   We track wall-clock time via time.monotonic() and send a Temporal
+    #   heartbeat every _HEARTBEAT_INTERVAL seconds regardless of whether
+    #   a message arrived.  This keeps the Temporal activity alive during
+    #   long quiet periods without flooding Temporal with unnecessary beats.
 
     offset              : int   = 0
     consecutive_errors  : int   = 0
-    time_since_heartbeat: float = 0.0   # accumulated seconds since last beat
+    last_heartbeat_time : float = time.monotonic()
 
     async with httpx.AsyncClient(
         timeout=httpx.Timeout(
@@ -262,11 +267,12 @@ async def handle_telegram_trigger(
         while True:
 
             # ── heartbeat ────────────────────────────────────────────────────
-            if _TEMPORAL_AVAILABLE:
+            now = time.monotonic()
+            if _TEMPORAL_AVAILABLE and (now - last_heartbeat_time) >= _HEARTBEAT_INTERVAL:
                 temporal_heartbeat(
                     f"telegram_trigger: waiting for message, offset={offset}"
                 )
-            time_since_heartbeat = 0.0
+                last_heartbeat_time = now
 
             # ── getUpdates ───────────────────────────────────────────────────
             try:
@@ -330,6 +336,48 @@ async def handle_telegram_trigger(
                 # Just loop again immediately; next heartbeat handles timing.
                 try:
                     await asyncio.sleep(1)
+                except asyncio.CancelledError:
+                    return {
+                        "message_id":    None,
+                        "chat_id":       0,
+                        "chat_type":     "unknown",
+                        "from_user_id":  None,
+                        "from_username": None,
+                        "from_name":     None,
+                        "text":          "",
+                        "date":          None,
+                        "raw_update":    {},
+                        "timed_out":     True,
+                    }
+                continue
+
+            except httpx.HTTPStatusError as exc:
+                # ── HTTP error status from Telegram ───────────────────────
+                # 409 Conflict means another process is already polling
+                # getUpdates for this bot token — an unrecoverable state
+                # that will persist until the other poller stops.
+                if exc.response.status_code == 409:
+                    return {
+                        "__service_error__": (
+                            "Telegram returned 409 Conflict — another process is "
+                            "already polling getUpdates with this bot token. Only "
+                            "one trigger instance can poll a given bot at a time."
+                        )
+                    }
+                logger.warning(
+                    "telegram_trigger: HTTP %s from Telegram",
+                    exc.response.status_code,
+                )
+                consecutive_errors += 1
+                if consecutive_errors >= _MAX_RETRIES:
+                    return {
+                        "__service_error__": (
+                            f"Telegram returned {consecutive_errors} consecutive "
+                            f"HTTP errors. Last: HTTP {exc.response.status_code}"
+                        )
+                    }
+                try:
+                    await asyncio.sleep(_RETRY_SLEEP)
                 except asyncio.CancelledError:
                     return {
                         "message_id":    None,
@@ -439,6 +487,19 @@ async def handle_telegram_trigger(
                     from_username or "unknown",
                     text or "[no text]",
                 )
+
+                # Flush the advanced offset back to Telegram before returning.
+                # Without this, the message (and anything skipped earlier in
+                # the same batch) gets re-delivered the next time the node runs,
+                # because Telegram only marks updates as consumed when a later
+                # getUpdates call arrives carrying the higher offset.
+                try:
+                    await client.post(
+                        f"{base_url}/getUpdates",
+                        json={"offset": offset, "timeout": 0},
+                    )
+                except httpx.RequestError:
+                    pass  # best-effort flush; worst case is one extra redelivery
 
                 return {
                     # Primary fields — use these in downstream nodes
