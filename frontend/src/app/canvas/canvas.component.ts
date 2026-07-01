@@ -1116,11 +1116,6 @@ export class CanvasComponent implements OnInit, OnDestroy {
     }
 
     private normalizeImportedWorkflow(wf: any): any {
-        for (const node of wf?.nodes || []) {
-            if (node?.id === 'node_2' && node?.type === 'telegram_send_message' && node.config?.message === '{{node_3.response}}') {
-                node.config.message = '{{node_6.response}}';
-            }
-        }
         return wf;
     }
 
