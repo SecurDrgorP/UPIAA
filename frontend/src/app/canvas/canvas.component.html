@@ -7,91 +7,131 @@
     <div #canvasEl class="flex-1 relative canvas-grid" (mousedown)="onCanvasMouseDown($event)" (wheel)="onWheel($event)"
         (click)="deselectNode()">
 
-        <!-- Toolbar -->
-        <div class="absolute top-4 left-4 z-40 flex items-center gap-2" (click)="$event.stopPropagation()">
-            <button class="toolbar-btn" (click)="togglePalette(); $event.stopPropagation()" [class.active]="showPalette"
-                [disabled]="isLocked">
-                <span>＋</span> Add Node
-            </button>
+        <!-- ═══ Command Bar ═══ -->
+        <div class="command-bar" (click)="$event.stopPropagation()">
 
-            <!-- Run Dropdown -->
-            <div class="relative" style="display: inline-flex; align-items: center;">
-                <button class="toolbar-btn success"
-                    (click)="showExecDropdown = !showExecDropdown; $event.stopPropagation()"
-                    [disabled]="nodes.length === 0" [class.opacity-60]="nodes.length === 0">
-                    <span>{{ isLocked ? '⚡' : '▶' }}</span>
-                    {{ isPublished ? 'Active' : (isExecuting ? 'Running...' : 'Run') }}
-                    <span style="margin-left: 4px; font-size: 10px;">▾</span>
+            <!-- ── Left Group: Flow Control ── -->
+            <div class="cmd-group">
+                <button class="cmd-btn" (click)="togglePalette(); $event.stopPropagation()"
+                    [class.cmd-btn-active]="showPalette" [disabled]="isLocked" title="Add Node">
+                    <svg class="cmd-icon" viewBox="0 0 20 20" fill="currentColor"><path d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z"/></svg>
+                    <span class="cmd-label">Add</span>
                 </button>
-                <!-- Dropdown Menu -->
-                <div *ngIf="showExecDropdown" class="exec-dropdown" (click)="$event.stopPropagation()">
-                    <div class="exec-dropdown-header">Run Options</div>
-                    <button class="exec-dropdown-item"
-                        (click)="executeWorkflow(); showExecDropdown = false; $event.stopPropagation()"
-                        [disabled]="isLocked">
-                        <div class="exec-dropdown-icon" style="background: rgba(16,185,129,0.15); color: #10b981;">▶
-                        </div>
-                        <div class="exec-dropdown-text">
-                            <span class="exec-dropdown-title">Execute Once</span>
-                            <span class="exec-dropdown-desc">Run the workflow a single time</span>
-                        </div>
+
+                <!-- Run Dropdown -->
+                <div class="relative" style="display: inline-flex; align-items: center;">
+                    <button class="cmd-btn cmd-btn-run"
+                        (click)="showExecDropdown = !showExecDropdown; $event.stopPropagation()"
+                        [disabled]="nodes.length === 0" [class.opacity-60]="nodes.length === 0"
+                        title="{{ isPublished ? 'Active' : (isExecuting ? 'Running...' : 'Run Workflow') }}">
+                        <svg class="cmd-icon" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clip-rule="evenodd"/></svg>
+                        <span class="cmd-label">{{ isPublished ? 'Active' : (isExecuting ? 'Running' : 'Run') }}</span>
+                        <svg class="cmd-chevron" viewBox="0 0 12 12" fill="currentColor"><path d="M3 5l3 3 3-3"/></svg>
                     </button>
-                    <div class="exec-dropdown-divider"></div>
-                    <button class="exec-dropdown-item"
-                        (click)="togglePublish(); showExecDropdown = false; $event.stopPropagation()"
-                        [disabled]="isExecuting">
-                        <div class="exec-dropdown-icon" [style]="isPublished
-                                ? 'background: rgba(239,68,68,0.15); color: #ef4444;'
-                                : 'background: rgba(251,146,60,0.15); color: #fb923c;'">
-                            {{ isPublished ? '⏹' : '🔄' }}
-                        </div>
-                        <div class="exec-dropdown-text">
-                            <span class="exec-dropdown-title">{{ isPublished ? 'Unpublish' : 'Publish' }}</span>
-                            <span class="exec-dropdown-desc">{{ isPublished ? 'Stop continuous execution' : 'Run
-                                continuously in background' }}</span>
-                        </div>
-                    </button>
+                    <!-- Dropdown Menu -->
+                    <div *ngIf="showExecDropdown" class="exec-dropdown" (click)="$event.stopPropagation()">
+                        <div class="exec-dropdown-header">Run Options</div>
+                        <button class="exec-dropdown-item"
+                            (click)="executeWorkflow(); showExecDropdown = false; $event.stopPropagation()"
+                            [disabled]="isLocked">
+                            <div class="exec-dropdown-icon" style="background: rgba(16,185,129,0.15); color: #10b981;">▶
+                            </div>
+                            <div class="exec-dropdown-text">
+                                <span class="exec-dropdown-title">Execute Once</span>
+                                <span class="exec-dropdown-desc">Run the workflow a single time</span>
+                            </div>
+                        </button>
+                        <div class="exec-dropdown-divider"></div>
+                        <button class="exec-dropdown-item"
+                            (click)="togglePublish(); showExecDropdown = false; $event.stopPropagation()"
+                            [disabled]="isExecuting">
+                            <div class="exec-dropdown-icon" [style]="isPublished
+                                    ? 'background: rgba(239,68,68,0.15); color: #ef4444;'
+                                    : 'background: rgba(251,146,60,0.15); color: #fb923c;'">
+                                {{ isPublished ? '⏹' : '🔄' }}
+                            </div>
+                            <div class="exec-dropdown-text">
+                                <span class="exec-dropdown-title">{{ isPublished ? 'Unpublish' : 'Publish' }}</span>
+                                <span class="exec-dropdown-desc">{{ isPublished ? 'Stop continuous execution' : 'Run
+                                    continuously in background' }}</span>
+                            </div>
+                        </button>
+                    </div>
                 </div>
+
+                <!-- Stop -->
+                <button class="cmd-btn cmd-btn-danger" *ngIf="isLocked"
+                    (click)="stopExecution(); $event.stopPropagation()" title="Stop execution">
+                    <svg class="cmd-icon" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8 7a1 1 0 00-1 1v4a1 1 0 001 1h4a1 1 0 001-1V8a1 1 0 00-1-1H8z" clip-rule="evenodd"/></svg>
+                    <span class="cmd-label">Stop</span>
+                </button>
             </div>
 
-            <!-- Stop -->
-            <button class="toolbar-btn"
-                style="background: rgba(239,68,68,0.15); color: #ef4444; border-color: rgba(239,68,68,0.3);"
-                (click)="stopExecution(); $event.stopPropagation()" *ngIf="isLocked" title="Stop execution">
-                <span>⏹</span> Stop
-            </button>
+            <div class="cmd-divider"></div>
 
-            <button class="toolbar-btn" (click)="saveWorkflow(); $event.stopPropagation()">
-                <span>💾</span> Save
-            </button>
-            <button class="toolbar-btn" (click)="undo(); $event.stopPropagation()" [disabled]="!canUndo" title="Undo (Ctrl+Z)">
-                <span>↩</span> Undo
-            </button>
-            <button class="toolbar-btn" (click)="redo(); $event.stopPropagation()" [disabled]="!canRedo" title="Redo (Ctrl+Shift+Z)">
-                <span>↪</span> Redo
-            </button>
-            <button class="toolbar-btn" (click)="toggleLog(); $event.stopPropagation()" *ngIf="executionLog.length > 0">
-                <span>📋</span> Log
-            </button>
+            <!-- ── Center Group: Edit & Status ── -->
+            <div class="cmd-group">
+                <button class="cmd-btn" (click)="saveWorkflow(); $event.stopPropagation()" title="Save workflow">
+                    <svg class="cmd-icon" viewBox="0 0 20 20" fill="currentColor"><path d="M3 5a2 2 0 012-2h8.586a1 1 0 01.707.293l2.414 2.414a1 1 0 01.293.707V15a2 2 0 01-2 2H5a2 2 0 01-2-2V5zm2 0v10h10V6.414L13.586 5H5zm3 7a2 2 0 114 0 2 2 0 01-4 0z"/></svg>
+                    <span class="cmd-label">Save</span>
+                </button>
+                <button class="cmd-btn" (click)="undo(); $event.stopPropagation()" [disabled]="!canUndo"
+                    title="Undo (Ctrl+Z)">
+                    <svg class="cmd-icon" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M7.707 3.293a1 1 0 010 1.414L5.414 7H11a7 7 0 017 7v2a1 1 0 11-2 0v-2a5 5 0 00-5-5H5.414l2.293 2.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+                </button>
+                <button class="cmd-btn" (click)="redo(); $event.stopPropagation()" [disabled]="!canRedo"
+                    title="Redo (Ctrl+Shift+Z)">
+                    <svg class="cmd-icon" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M12.293 3.293a1 1 0 011.414 0l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414-1.414L14.586 9H9a5 5 0 00-5 5v2a1 1 0 11-2 0v-2a7 7 0 017-7h5.586l-2.293-2.293a1 1 0 010-1.414z" clip-rule="evenodd"/></svg>
+                </button>
+                <button class="cmd-btn" (click)="toggleLog(); $event.stopPropagation()"
+                    *ngIf="executionLog.length > 0" title="Execution Log">
+                    <svg class="cmd-icon" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clip-rule="evenodd"/></svg>
+                    <span class="cmd-label">Log</span>
+                </button>
+                <button class="cmd-btn cmd-btn-accent" *ngIf="hasExecutionResults"
+                    (click)="copyExecutionResults(); $event.stopPropagation()" title="Copy execution results as JSON">
+                    <svg class="cmd-icon" viewBox="0 0 20 20" fill="currentColor"><path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z"/><path fill-rule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z" clip-rule="evenodd"/></svg>
+                    <span class="cmd-label">Results</span>
+                </button>
+            </div>
 
-            <!-- JSON Import/Export -->
-            <div class="border-l border-surface-700 h-5 mx-1"></div>
-            <button class="toolbar-btn text-accent hover:text-accent-light bg-accent/10 border-accent/20" 
-                (click)="toggleAiChat(); $event.stopPropagation()" title="Generate workflow with AI">
-                <span>✨</span> AI Build
-            </button>
-            <button class="toolbar-btn" (click)="exportWorkflow(); $event.stopPropagation()"
-                [disabled]="nodes.length === 0" title="Download workflow as JSON">
-                <span>📥</span> Export
-            </button>
-            <button class="toolbar-btn" (click)="copyWorkflowJson(); $event.stopPropagation()"
-                [disabled]="nodes.length === 0" title="Copy workflow JSON to clipboard">
-                <span>📋</span> Copy JSON
-            </button>
-            <button class="toolbar-btn" (click)="triggerImport(); $event.stopPropagation()"
-                title="Import workflow from JSON file">
-                <span>📤</span> Import
-            </button>
+            <div class="cmd-divider"></div>
+
+            <!-- ── Right Group: Tools & IO ── -->
+            <div class="cmd-group">
+                <button class="cmd-btn cmd-btn-ai"
+                    (click)="toggleAiChat(); $event.stopPropagation()" title="Generate workflow with AI">
+                    <svg class="cmd-icon" viewBox="0 0 20 20" fill="currentColor"><path d="M5 2a1 1 0 011 1v1h1a1 1 0 010 2H6v1a1 1 0 01-2 0V6H3a1 1 0 010-2h1V3a1 1 0 011-1zm0 10a1 1 0 011 1v1h1a1 1 0 110 2H6v1a1 1 0 11-2 0v-1H3a1 1 0 110-2h1v-1a1 1 0 011-1zm7-10a1 1 0 01.967.744L14.146 7.2 17.5 7.512a1 1 0 01.576 1.755l-2.426 2.154.672 3.256a1 1 0 01-1.49 1.073L12 14.084 9.168 15.75a1 1 0 01-1.49-1.073l.672-3.256L5.924 9.267a1 1 0 01.576-1.755l3.354-.312 1.179-3.456A1 1 0 0112 3z"/></svg>
+                    <span class="cmd-label">AI</span>
+                </button>
+                <button class="cmd-btn" (click)="exportWorkflow(); $event.stopPropagation()"
+                    [disabled]="nodes.length === 0" title="Download workflow as JSON">
+                    <svg class="cmd-icon" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clip-rule="evenodd"/></svg>
+                    <span class="cmd-label">Export</span>
+                </button>
+                <button class="cmd-btn" (click)="copyWorkflowJson(); $event.stopPropagation()"
+                    [disabled]="nodes.length === 0" title="Copy workflow JSON to clipboard">
+                    <svg class="cmd-icon" viewBox="0 0 20 20" fill="currentColor"><path d="M8 3a1 1 0 011-1h2a1 1 0 110 2H9a1 1 0 01-1-1z"/><path d="M6 3a2 2 0 00-2 2v11a2 2 0 002 2h8a2 2 0 002-2V5a2 2 0 00-2-2 3 3 0 01-3 3H9a3 3 0 01-3-3z"/></svg>
+                    <span class="cmd-label">Copy</span>
+                </button>
+                <button class="cmd-btn" (click)="triggerImport(); $event.stopPropagation()"
+                    title="Import workflow from JSON file">
+                    <svg class="cmd-icon" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM6.293 6.707a1 1 0 010-1.414l3-3a1 1 0 011.414 0l3 3a1 1 0 01-1.414 1.414L11 5.414V13a1 1 0 11-2 0V5.414L7.707 6.707a1 1 0 01-1.414 0z" clip-rule="evenodd"/></svg>
+                    <span class="cmd-label">Import</span>
+                </button>
+
+                <div class="cmd-divider"></div>
+
+                <!-- Workflow Name (inline) -->
+                <input class="cmd-name-input" [(ngModel)]="workflowName"
+                    placeholder="Workflow name..." (click)="$event.stopPropagation()" />
+            </div>
+        </div>
+
+        <!-- Copy Toast -->
+        <div *ngIf="copyToast" class="copy-toast" (click)="$event.stopPropagation()">
+            <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+            {{ copyToast }}
         </div>
 
         <!-- Locked overlay when executing or published -->
@@ -149,12 +189,6 @@
             <span>⚠️</span> {{ aiWarningBanner }}
         </div>
 
-        <!-- Workflow Name -->
-        <div class="absolute top-4 right-4 z-40" *ngIf="!selectedNode" (click)="$event.stopPropagation()">
-            <input
-                class="form-input w-48 text-right text-sm bg-transparent border-transparent hover:border-surface-700 focus:border-accent"
-                [(ngModel)]="workflowName" placeholder="Workflow name..." />
-        </div>
 
         <!-- ═══ Pannable / Zoomable layer ═══ -->
         <div class="absolute inset-0" [style.transform]="'translate(' + panX + 'px,' + panY + 'px) scale(' + zoom + ')'"

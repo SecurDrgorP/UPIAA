@@ -324,6 +324,66 @@ body {
   color: #ffffff;
 }
 
+/* Command bar (light mode) */
+[data-theme="light"] .command-bar {
+  background: rgba(255, 255, 255, 0.88);
+  border-color: rgba(180, 195, 215, 0.6);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08), 0 1px 0 rgba(255, 255, 255, 0.5) inset;
+}
+[data-theme="light"] .cmd-btn {
+  color: #475569;
+}
+[data-theme="light"] .cmd-btn:hover {
+  background: rgba(0, 0, 0, 0.05);
+  color: #1e293b;
+}
+[data-theme="light"] .cmd-btn.cmd-btn-active {
+  background: rgba(99, 102, 241, 0.1);
+  color: #4f46e5;
+  border-color: rgba(99, 102, 241, 0.2);
+}
+[data-theme="light"] .cmd-btn-run {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(5, 150, 105, 0.06));
+  color: #059669;
+  border-color: rgba(16, 185, 129, 0.15);
+}
+[data-theme="light"] .cmd-btn-run:hover {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.18), rgba(5, 150, 105, 0.12));
+  color: #047857;
+}
+[data-theme="light"] .cmd-btn-danger {
+  background: rgba(239, 68, 68, 0.08);
+  color: #dc2626;
+  border-color: rgba(239, 68, 68, 0.15);
+}
+[data-theme="light"] .cmd-btn-ai {
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.08), rgba(139, 92, 246, 0.06));
+  color: #7c3aed;
+  border-color: rgba(139, 92, 246, 0.15);
+}
+[data-theme="light"] .cmd-btn-accent {
+  background: rgba(99, 102, 241, 0.07);
+  color: #4f46e5;
+  border-color: rgba(99, 102, 241, 0.15);
+}
+[data-theme="light"] .cmd-divider {
+  background: linear-gradient(180deg, transparent 0%, rgba(99, 102, 241, 0.15) 30%, rgba(139, 92, 246, 0.12) 70%, transparent 100%);
+}
+[data-theme="light"] .cmd-name-input {
+  color: #475569;
+}
+[data-theme="light"] .cmd-name-input:focus {
+  border-color: rgba(99, 102, 241, 0.4);
+  background: rgba(240, 244, 248, 0.5);
+  color: #1e293b;
+}
+[data-theme="light"] .copy-toast {
+  background: rgba(16, 185, 129, 0.1);
+  border-color: rgba(16, 185, 129, 0.2);
+  color: #047857;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
+}
+
 /* Theme toggle button */
 [data-theme="light"] .theme-toggle-btn {
   background: #ffffff;
@@ -724,7 +784,248 @@ body {
   color: #94a3b8;
 }
 
-/* ─── Toolbar ────────────────────────────────────────────────────── */
+/* ─── Command Bar (floating glassmorphic pill) ───────────────────── */
+
+.command-bar {
+  position: absolute;
+  top: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 40;
+  display: inline-flex;
+  align-items: center;
+  gap: 0;
+  padding: 6px 10px;
+  background: rgba(10, 15, 28, 0.82);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(71, 85, 105, 0.35);
+  border-radius: 16px;
+  box-shadow:
+    0 4px 24px rgba(0, 0, 0, 0.4),
+    0 1px 0 rgba(255, 255, 255, 0.03) inset;
+  animation: cmdBarIn 0.25s ease-out;
+}
+
+@keyframes cmdBarIn {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
+.cmd-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.cmd-divider {
+  width: 1px;
+  height: 22px;
+  margin: 0 8px;
+  background: linear-gradient(
+    180deg,
+    transparent 0%,
+    rgba(99, 102, 241, 0.3) 30%,
+    rgba(139, 92, 246, 0.25) 70%,
+    transparent 100%
+  );
+  flex-shrink: 0;
+}
+
+/* ─── Command Button ────────────────────────────────────────────── */
+
+.cmd-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 10px;
+  border-radius: 10px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: #c8cdd5;
+  font-size: 0.75rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease, transform 0.12s ease;
+  white-space: nowrap;
+  line-height: 1;
+}
+
+.cmd-btn:hover {
+  background: rgba(255, 255, 255, 0.07);
+  color: #eef0f4;
+  transform: translateY(-1px);
+}
+
+.cmd-btn:active {
+  opacity: 0.8;
+  transform: translateY(0);
+}
+
+.cmd-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.cmd-btn.cmd-btn-active {
+  background: rgba(99, 102, 241, 0.15);
+  color: #a5b4fc;
+  border-color: rgba(99, 102, 241, 0.3);
+}
+
+.cmd-icon {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+
+.cmd-label {
+  font-size: 0.72rem;
+  letter-spacing: 0.01em;
+}
+
+.cmd-chevron {
+  width: 10px;
+  height: 10px;
+  opacity: 0.5;
+  margin-left: -2px;
+}
+
+/* ── Variant: Run ────────────────────────────────────────────────── */
+
+.cmd-btn-run {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.15), rgba(5, 150, 105, 0.1));
+  color: #34d399;
+  border-color: rgba(16, 185, 129, 0.2);
+}
+
+.cmd-btn-run:hover {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.25), rgba(5, 150, 105, 0.18));
+  color: #6ee7b7;
+}
+
+/* ── Variant: Danger ─────────────────────────────────────────────── */
+
+.cmd-btn-danger {
+  background: rgba(239, 68, 68, 0.12);
+  color: #f87171;
+  border-color: rgba(239, 68, 68, 0.2);
+}
+
+.cmd-btn-danger:hover {
+  background: rgba(239, 68, 68, 0.22);
+  color: #fca5a5;
+}
+
+/* ── Variant: AI ─────────────────────────────────────────────────── */
+
+.cmd-btn-ai {
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.12), rgba(139, 92, 246, 0.1));
+  color: #a78bfa;
+  border-color: rgba(139, 92, 246, 0.2);
+}
+
+.cmd-btn-ai:hover {
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.22), rgba(139, 92, 246, 0.18));
+  color: #c4b5fd;
+}
+
+/* ── Variant: Accent (Results) ───────────────────────────────────── */
+
+.cmd-btn-accent {
+  background: rgba(99, 102, 241, 0.1);
+  color: #818cf8;
+  border-color: rgba(99, 102, 241, 0.2);
+}
+
+.cmd-btn-accent:hover {
+  background: rgba(99, 102, 241, 0.2);
+  color: #a5b4fc;
+}
+
+/* ── Inline Workflow Name ────────────────────────────────────────── */
+
+.cmd-name-input {
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  padding: 4px 10px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: #94a3b8;
+  width: 140px;
+  outline: none;
+  transition: border-color 0.15s, background 0.15s, color 0.15s;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+.cmd-name-input:hover {
+  border-color: rgba(71, 85, 105, 0.5);
+}
+
+.cmd-name-input:focus {
+  border-color: rgba(99, 102, 241, 0.5);
+  background: rgba(15, 23, 42, 0.5);
+  color: #e2e8f0;
+}
+
+/* ── Copy Toast ──────────────────────────────────────────────────── */
+
+.copy-toast {
+  position: absolute;
+  top: 62px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 45;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 16px;
+  background: rgba(16, 185, 129, 0.15);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  border-radius: 10px;
+  color: #34d399;
+  font-size: 0.72rem;
+  font-weight: 600;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+  animation: toastIn 0.2s ease-out;
+  pointer-events: none;
+}
+
+@keyframes toastIn {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
+/* ── Reduced Motion ──────────────────────────────────────────────── */
+
+@media (prefers-reduced-motion: reduce) {
+  .cmd-btn {
+    transition: none;
+  }
+  .command-bar {
+    animation: none;
+  }
+  .copy-toast {
+    animation: none;
+  }
+}
+
+/* ─── Legacy Toolbar Button (kept for backward compat) ───────────── */
 
 .toolbar-btn {
   display: inline-flex;

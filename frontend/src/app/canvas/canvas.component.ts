@@ -52,6 +52,10 @@ export class CanvasComponent implements OnInit, OnDestroy {
     /** Workflow validation error shown to user before execution */
     validationError: string | null = null;
 
+    /** Toast message shown after clipboard copy (shared by Copy JSON + Copy Results) */
+    copyToast: string | null = null;
+    private _copyToastTimer: ReturnType<typeof setTimeout> | null = null;
+
     /** Loaded node type catalog (used for secret stripping on export) */
     allNodeTypes: NodeTypeInfo[] = [];
 
@@ -1051,7 +1055,170 @@ export class CanvasComponent implements OnInit, OnDestroy {
         const wf = this.stripSecrets(this.buildWorkflow());
         const json = JSON.stringify(wf, null, 2);
         navigator.clipboard.writeText(json).then(() => {
-            console.log('Workflow JSON copied to clipboard (secrets stripped)');
+            this.showCopyToast('Workflow JSON copied!');
+        });
+    }
+
+    /* ═══════════════════════════════════════════════════════════
+       Copy Execution Results
+       ═══════════════════════════════════════════════════════════ */
+
+    /** Visible only after execution finishes (not mid-run, not while published). */
+    get hasExecutionResults(): boolean {
+        return !this.isExecuting && !this.isPublished && this.executionLog.length > 0;
+    }
+
+    /** Show a brief toast message below the command bar. */
+    private showCopyToast(message: string): void {
+        if (this._copyToastTimer) clearTimeout(this._copyToastTimer);
+        this.copyToast = message;
+        this._copyToastTimer = setTimeout(() => {
+            this.copyToast = null;
+            this._copyToastTimer = null;
+        }, 2500);
+    }
+
+    /**
+     * Truncate a result object to maxBytes when serialized.
+     * Returns the original if small enough, otherwise a truncated
+     * copy with a `_truncated: true` flag.
+     */
+    private truncateResult(result: any, maxBytes = 10240): any {
+        if (result == null) return null;
+        try {
+            const json = JSON.stringify(result);
+            if (json.length <= maxBytes) return result;
+            return { _truncated: true, _original_size: json.length, preview: json.substring(0, maxBytes) };
+        } catch {
+            return { _truncated: true, _error: 'Unserializable result' };
+        }
+    }
+
+    /**
+     * For published workflows, the execution log is one flat stream
+     * spanning many cooldown cycles. Each cycle starts with an
+     * `engine / running` entry. Slice to the most recent cycle.
+     * For one-off executions, returns all real-node log entries.
+     */
+    private getLastRunLogs(): ExecutionStatus[] {
+        const SYNTHETIC_IDS = new Set(['__done__', 'engine']);
+
+        // Check if this is/was a published workflow
+        const hasEngineEntries = this.executionLog.some(e => e.node_id === 'engine');
+
+        if (hasEngineEntries) {
+            // Find the index of the last engine "running" entry (cycle start marker)
+            let lastCycleStart = -1;
+            for (let i = this.executionLog.length - 1; i >= 0; i--) {
+                const e = this.executionLog[i];
+                if (e.node_id === 'engine' && e.status === 'running') {
+                    lastCycleStart = i;
+                    break;
+                }
+            }
+            // Slice from that boundary, then filter out synthetic entries
+            const sliced = lastCycleStart >= 0
+                ? this.executionLog.slice(lastCycleStart)
+                : this.executionLog;
+            return sliced.filter(e => !SYNTHETIC_IDS.has(e.node_id));
+        }
+
+        // One-off execution: just filter out synthetics
+        return this.executionLog.filter(e => !SYNTHETIC_IDS.has(e.node_id));
+    }
+
+    /**
+     * Build a structured JSON report of the last execution run.
+     *
+     * - Excludes comment/group nodes from all counts
+     * - Pulls input from node config (secrets stripped)
+     * - Pulls output from node.data.result (truncated to 10KB)
+     * - Cross-references error details from executionLog (not node state)
+     * - Skipped = explicitly skipped by GraphNavigator OR still idle after run
+     */
+    buildExecutionReport(): object {
+        const execNodes = this.nodes.filter(
+            n => n.data.type !== 'comment' && n.data.type !== 'group'
+        );
+
+        const lastRunLogs = this.getLastRunLogs();
+
+        // Build a map: node_id → last terminal log entry (for error details)
+        const logByNode = new Map<string, ExecutionStatus>();
+        for (const entry of lastRunLogs) {
+            // Keep overwriting — last entry wins (running → success, or running → failed)
+            logByNode.set(entry.node_id, entry);
+        }
+
+        // Strip secrets from a workflow copy for safe input extraction
+        const cleanWf = this.stripSecrets(this.buildWorkflow());
+        const cleanConfigMap = new Map<string, Record<string, any>>();
+        for (const n of cleanWf.nodes) {
+            cleanConfigMap.set(n.id, n.config);
+        }
+
+        const executedNodes: any[] = [];
+        const skippedNodes: any[] = [];
+
+        for (const node of execNodes) {
+            const status = node.data.status;
+            const logEntry = logByNode.get(node.id);
+
+            if (status === 'skipped' || status === 'idle') {
+                skippedNodes.push({
+                    node_id: node.id,
+                    label: node.label,
+                    type: node.data.type,
+                });
+                continue;
+            }
+
+            const entry: any = {
+                node_id: node.id,
+                label: node.label,
+                type: node.data.type,
+                status: status,
+                input: cleanConfigMap.get(node.id) || {},
+                output: this.truncateResult(node.data.result),
+            };
+
+            // Error details live on the log entry, not on GraphNode.data
+            if ((status === 'failed' || status === 'error') && logEntry) {
+                entry.error = logEntry.error || logEntry.message || null;
+                entry.error_type = logEntry.error_type || null;
+                if (logEntry.invalid_config_fields?.length) {
+                    entry.invalid_config_fields = logEntry.invalid_config_fields;
+                }
+            }
+
+            executedNodes.push(entry);
+        }
+
+        const succeeded = executedNodes.filter(n => n.status === 'success').length;
+        const failed = executedNodes.filter(n => n.status === 'failed' || n.status === 'error').length;
+
+        return {
+            workflow: this.workflowName,
+            workflow_id: this.workflowId,
+            timestamp: new Date().toISOString(),
+            engine: 'M8M',
+            summary: {
+                total_nodes: execNodes.length,
+                executed: executedNodes.length,
+                succeeded,
+                failed,
+                skipped: skippedNodes.length,
+            },
+            executed_nodes: executedNodes,
+            skipped_nodes: skippedNodes,
+        };
+    }
+
+    copyExecutionResults(): void {
+        const report = this.buildExecutionReport();
+        const json = JSON.stringify(report, null, 2);
+        navigator.clipboard.writeText(json).then(() => {
+            this.showCopyToast('Execution report copied!');
         });
     }
 
