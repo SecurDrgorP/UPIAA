@@ -131,6 +131,14 @@ export interface GraphNode {
         config: Record<string, any>;
         status: ExecutionStatusType;
         result?: any;
+        /** Error message from a failed execution — cleared when the node starts re-running */
+        error?: string;
+        /** Error type string (e.g. "InputError") — cleared when the node starts re-running */
+        error_type?: string;
+        /** Config field keys that caused the failure — cleared when the node starts re-running */
+        invalid_config_fields?: string[];
+        /** Execution duration in milliseconds from __meta__.duration_ms */
+        duration_ms?: number;
     };
     position?: { x: number; y: number };
 }

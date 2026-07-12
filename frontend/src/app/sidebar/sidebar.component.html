@@ -85,6 +85,22 @@
         <!-- ═══════════════════════ Config Tab — Universal Auto-Renderer ═══════════════════════ -->
         <div *ngIf="activeTab === 'config' && node.data.type !== 'group' && node.data.type !== 'comment'" class="p-4 space-y-4">
 
+            <!-- ── Error Alert Panel (shown when node has failed) ── -->
+            <div *ngIf="node.data.status === 'failed' || node.data.status === 'error'"
+                 class="node-error-alert">
+                <div class="node-error-alert-header">
+                    <span class="node-error-alert-icon">⚠️</span>
+                    <span class="node-error-alert-type">{{ node.data.error_type || 'Execution Failed' }}</span>
+                </div>
+                <div class="node-error-alert-message" *ngIf="node.data.error">
+                    {{ node.data.error }}
+                </div>
+                <div *ngIf="node.data.invalid_config_fields?.length" class="node-error-alert-fields">
+                    <span class="node-error-alert-fields-label">Fix these fields:</span>
+                    <span *ngFor="let f of node.data.invalid_config_fields" class="node-error-field-chip">{{ f }}</span>
+                </div>
+            </div>
+
             <!-- Node type header -->
             <div class="flex items-center justify-between">
                 <div class="text-[10px] font-bold text-surface-500 uppercase tracking-widest">
@@ -134,7 +150,8 @@
                  Reads from buildConfigFields() — works for ALL node types
                  ════════════════════════════════════════════════════════════ -->
             <ng-container *ngFor="let field of cachedFields; trackBy: trackByField">
-                <div *ngIf="isFieldVisible(field)" class="sidebar-section p-3 bg-surface-800/20 rounded-lg space-y-2 border border-surface-800/40">
+                <div *ngIf="isFieldVisible(field)" class="sidebar-section p-3 bg-surface-800/20 rounded-lg space-y-2 border"
+                     [ngClass]="{ 'border-danger': isInvalidField(field.key), 'border-surface-800/40': !isInvalidField(field.key) }">
 
                     <!-- Label -->
                     <label class="form-label flex items-center gap-1">

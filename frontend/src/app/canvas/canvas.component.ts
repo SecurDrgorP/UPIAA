@@ -110,6 +110,14 @@ export class CanvasComponent implements OnInit, OnDestroy {
     private destroy$ = new Subject<void>();
     private _saveTimer: ReturnType<typeof setTimeout> | null = null;
 
+    /**
+     * Tracks nodes that reached a terminal status (success/failed/error) during
+     * the current run. Used to suppress trailing `skipped` events emitted by the
+     * graph navigator after a loop body has already successfully completed —
+     * otherwise the loop body would flash green then immediately go grey+hatched.
+     */
+    private resolvedThisRun = new Set<string>();
+
     readonly NODE_W = NODE_W;
     readonly NODE_H = NODE_H;
 
@@ -188,7 +196,7 @@ export class CanvasComponent implements OnInit, OnDestroy {
                             next: (status: ExecutionStatus) => {
                                 this.appendLog(status);
                                 if (status.node_id !== '__done__' && status.node_id !== 'engine') {
-                                    this.updateNodeStatus(status.node_id, status.status as ExecutionStatusType, status.result);
+                                    this.updateNodeStatus(status);
                                 }
                                 if (status.node_id === 'engine' && status.status === 'error') {
                                     this.isPublished = false;
@@ -697,9 +705,11 @@ export class CanvasComponent implements OnInit, OnDestroy {
         this.isExecuting = true;
         this.executionLog = [];
         this.showLog = true;
+        this.resolvedThisRun.clear();
 
         this.nodes = this.nodes.map(n => ({
-            ...n, data: { ...n.data, status: 'idle' as ExecutionStatusType, result: undefined },
+            ...n, data: { ...n.data, status: 'idle' as ExecutionStatusType, result: undefined,
+                error: undefined, error_type: undefined, invalid_config_fields: undefined, duration_ms: undefined },
         }));
 
         const wfPayload = this.buildWorkflow();
@@ -713,7 +723,7 @@ export class CanvasComponent implements OnInit, OnDestroy {
                 next: (status: ExecutionStatus) => {
                     this.appendLog(status);
                     if (status.node_id !== '__done__' && status.node_id !== 'engine') {
-                        this.updateNodeStatus(status.node_id, status.status as ExecutionStatusType, status.result);
+                        this.updateNodeStatus(status);
                     }
                 },
                 error: (err: any) => { console.error('Execution error:', err); this.isExecuting = false; },
@@ -762,7 +772,7 @@ export class CanvasComponent implements OnInit, OnDestroy {
                                             next: (status: ExecutionStatus) => {
                                                 this.appendLog(status);
                                                 if (status.node_id !== '__done__' && status.node_id !== 'engine') {
-                                                    this.updateNodeStatus(status.node_id, status.status as ExecutionStatusType, status.result);
+                                                    this.updateNodeStatus(status);
                                                 }
                                                 // If engine reports error, publish has stopped
                                                 if (status.node_id === 'engine' && (status.status === 'error' || status.status === 'failed')) {
@@ -781,16 +791,72 @@ export class CanvasComponent implements OnInit, OnDestroy {
         }
     }
 
-    private updateNodeStatus(nodeId: string, status: ExecutionStatusType, result?: any): void {
+    private updateNodeStatus(statusEvent: ExecutionStatus): void {
+        const nodeId = statusEvent.node_id;
+        const status = statusEvent.status as ExecutionStatusType;
+
+        // ── Loop-body skip overwrite fix ──────────────────────────────
+        // The graph navigator pre-marks loop body nodes as skipped, then the
+        // loop runner sends real running→success events. After the loop, the
+        // outer cursor walks past those same node IDs again and emits a trailing
+        // `skipped`. Guard: once a node has reached a terminal status this run,
+        // ignore any subsequent `skipped` event for it.
+        const terminalStatuses: ExecutionStatusType[] = ['success', 'failed', 'error', 'complete'];
+        if (status === 'skipped' && this.resolvedThisRun.has(nodeId)) {
+            return;
+        }
+        if (terminalStatuses.includes(status)) {
+            this.resolvedThisRun.add(nodeId);
+        }
+        // ─────────────────────────────────────────────────────────────
+
         const idx = this.nodes.findIndex(n => n.id === nodeId);
         if (idx > -1) {
-            // Clear stale result when node starts re-running so sidebar shows fresh output
-            const clearedResult = status === 'running' ? undefined : result;
-            this.nodes[idx] = { ...this.nodes[idx], data: { ...this.nodes[idx].data, status, result: clearedResult } };
+            const isRunning = status === 'running';
+            // Clear all ephemeral execution state when a node starts re-running
+            const updatedData = {
+                ...this.nodes[idx].data,
+                status,
+                result:               isRunning ? undefined : statusEvent.result,
+                error:                isRunning ? undefined : (statusEvent.error || statusEvent.message || undefined),
+                error_type:           isRunning ? undefined : (statusEvent.error_type || undefined),
+                invalid_config_fields: isRunning ? undefined : (statusEvent.invalid_config_fields?.length ? statusEvent.invalid_config_fields : undefined),
+                duration_ms:          isRunning ? undefined : (statusEvent.result?.['__meta__']?.duration_ms ?? undefined),
+            };
+            this.nodes[idx] = { ...this.nodes[idx], data: updatedData };
             this.nodes = [...this.nodes];
             if (this.selectedNode?.id === nodeId) this.selectedNode = this.nodes[idx];
             if (this.sidebarNode?.id === nodeId) this.sidebarNode = this.nodes[idx];
         }
+    }
+
+    /* ── Node Error Accessors (used by canvas template) ──────────── */
+
+    getNodeError(node: GraphNode): string {
+        return node.data.error || '';
+    }
+
+    getNodeErrorType(node: GraphNode): string {
+        return node.data.error_type || '';
+    }
+
+    getNodeInvalidFields(node: GraphNode): string[] {
+        return node.data.invalid_config_fields || [];
+    }
+
+    getNodeDuration(node: GraphNode): string {
+        const ms = node.data.duration_ms;
+        if (ms === undefined || ms === null) return '';
+        if (ms < 1000) return `${Math.round(ms)}ms`;
+        return `${(ms / 1000).toFixed(1)}s`;
+    }
+
+    /** Format a log entry's duration from __meta__.duration_ms in the result */
+    getLogEntryDuration(entry: ExecutionStatus): string {
+        const ms = (entry.result as any)?.['__meta__']?.duration_ms;
+        if (!ms) return '';
+        if (ms < 1000) return `${Math.round(ms)}ms`;
+        return `${(ms / 1000).toFixed(1)}s`;
     }
 
     /** Append a log entry and enforce the 500-entry cap to prevent memory growth. */

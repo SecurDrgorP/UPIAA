@@ -292,11 +292,11 @@
 
                         <div class="node-inner">
                             <div class="flex items-center gap-2.5 mb-1.5">
-                                <span class="text-base">{{ getNodeIcon(node.data.type) }}</span>
+                                <!-- Category icon chip -->
+                                <span class="node-icon-chip">{{ getNodeIcon(node.data.type) }}</span>
                                 <span class="text-xs font-semibold text-surface-100 truncate flex-1">
                                     {{ node.label }}
                                 </span>
-                                <!-- BUG-02: ⚙️ Configure button (opens sidebar) -->
                                 <button class="text-surface-500 hover:text-accent text-xs leading-none opacity-0 group-hover:opacity-100 transition-opacity px-1"
                                     title="Configure"
                                     (click)="openSidebar(node, $event)">⚙️</button>
@@ -306,25 +306,46 @@
 
                             <div class="mb-2 px-0.5">
                                 <div class="text-[10px] text-surface-400 leading-tight italic truncate flex items-center gap-1.5">
-                                    <div *ngIf="node.data.type === 'receive_email' && node.data.status === 'running'" 
-                                         class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_5px_rgba(52,211,153,0.8)]"></div>
+                                    <div *ngIf="node.data.type === 'receive_email' && node.data.status === 'running'"
+                                         class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></div>
                                     {{ getNodeSubtitle(node) }}
                                 </div>
                             </div>
 
                             <div class="flex items-center justify-between mt-auto">
-                                <div class="flex items-center gap-1">
-                                    <span class="text-[10px] text-surface-500 font-mono">{{ node.data.type }}</span>
-                                    <span *ngIf="node.data.type === 'receive_email' && node.data.config['subject_filter_mode'] !== 'none'" 
-                                          class="text-[8px] px-1 rounded bg-surface-700 text-surface-400 border border-surface-600 uppercase">
-                                        {{ node.data.config['subject_filter_mode'] }}
-                                    </span>
+                                <div class="flex items-center gap-1.5">
+                                    <span class="text-[9px] text-surface-600 font-mono">{{ node.data.type }}</span>
+                                    <!-- Duration chip — shown after execution -->
+                                    <span *ngIf="getNodeDuration(node)" class="node-duration-chip">{{ getNodeDuration(node) }}</span>
                                 </div>
                                 <span class="status-badge" [ngClass]="node.data.status || 'idle'">
                                     {{ getStatusIcon(node.data.status || 'idle') }}
                                     {{ node.data.status || 'idle' }}
                                 </span>
                             </div>
+                        </div>
+
+                        <!-- Skipped hatch overlay — shown when node was skipped -->
+                        <div *ngIf="node.data.status === 'skipped'" class="node-skipped-hatch"></div>
+                    </div>
+
+                    <!-- ⚠️ Error badge — floats OUTSIDE the card boundary, top-right corner -->
+                    <!-- Uses a wrapper div so it doesn't compete with the ⚙️/✕ buttons inside -->
+                    <div *ngIf="node.data.status === 'failed' || node.data.status === 'error'"
+                         class="node-error-badge" (click)="openSidebar(node, $event)">
+                        <span class="error-badge-icon">⚠</span>
+                        <!-- Hover tooltip -->
+                        <div class="error-badge-tooltip" (click)="$event.stopPropagation()">
+                            <div class="error-tooltip-header">
+                                <span class="error-tooltip-type">{{ getNodeErrorType(node) || 'Execution Error' }}</span>
+                                <span class="error-tooltip-node">{{ node.label }}</span>
+                            </div>
+                            <div class="error-tooltip-message">{{ getNodeError(node) || 'Node failed — click to inspect' }}</div>
+                            <div *ngIf="getNodeInvalidFields(node).length > 0" class="error-tooltip-fields">
+                                <span class="error-tooltip-fields-label">Missing fields:</span>
+                                <span *ngFor="let f of getNodeInvalidFields(node)" class="error-field-chip">{{ f }}</span>
+                            </div>
+                            <div class="error-tooltip-hint">Click to open Config →</div>
                         </div>
                     </div>
 
@@ -435,20 +456,34 @@
         <!-- Execution Log Panel -->
         <div *ngIf="showLog && executionLog.length > 0" class="absolute bottom-4 left-4 z-40 w-96 exec-log"
             (click)="$event.stopPropagation()">
-            <div class="flex items-center justify-between mb-2">
-                <span class="text-xs font-semibold text-surface-300 uppercase tracking-wider">Execution Log</span>
+            <div class="flex items-center justify-between mb-3">
+                <span class="text-xs font-semibold text-surface-300 uppercase tracking-wider">⚡ Execution Log</span>
                 <button class="text-surface-500 hover:text-surface-300 text-xs" (click)="showLog = false">✕</button>
             </div>
-            <div *ngFor="let entry of executionLog" class="exec-log-entry">
-                <span>{{ getStatusIcon(entry.status) }}</span>
-                <span class="text-surface-300 font-medium">{{ entry.node_label }}</span>
-                <span class="text-surface-500">→</span>
-                <span [ngClass]="{
-                    'text-accent-light': entry.status === 'running',
-                    'text-success': entry.status === 'success',
-                    'text-danger': entry.status === 'error' || entry.status === 'failed',
-                    'text-surface-400': entry.status === 'idle' || entry.status === 'skipped'
-                }">{{ entry.status }}</span>
+            <div *ngFor="let entry of executionLog" class="exec-log-entry" [class.exec-log-error]="entry.status === 'error' || entry.status === 'failed'">
+                <div class="exec-log-dot" [ngClass]="'dot-' + entry.status"></div>
+                <div class="exec-log-content">
+                    <div class="flex items-center justify-between gap-2">
+                        <span class="text-surface-200 font-medium text-[11px] truncate">{{ entry.node_label }}</span>
+                        <div class="flex items-center gap-1.5 shrink-0">
+                            <span *ngIf="getLogEntryDuration(entry)" class="text-[9px] text-surface-500 font-mono">{{ getLogEntryDuration(entry) }}</span>
+                            <span class="text-[10px]" [ngClass]="{
+                                'text-accent-light': entry.status === 'running',
+                                'text-success': entry.status === 'success',
+                                'text-danger': entry.status === 'error' || entry.status === 'failed',
+                                'text-surface-400': entry.status === 'idle' || entry.status === 'skipped'
+                            }">{{ getStatusIcon(entry.status) }} {{ entry.status }}</span>
+                        </div>
+                    </div>
+                    <!-- Error message inline for failed entries -->
+                    <div *ngIf="(entry.status === 'failed' || entry.status === 'error') && (entry.error || entry.message)"
+                         class="exec-log-error-msg">
+                        {{ entry.error || entry.message }}
+                        <span *ngIf="entry.invalid_config_fields?.length" class="exec-log-error-fields">
+                            · missing: {{ entry.invalid_config_fields!.join(', ') }}
+                        </span>
+                    </div>
+                </div>
             </div>
         </div>
 

@@ -9,11 +9,11 @@ import { RouterModule, Router } from '@angular/router';
   template: `
     <div class="h-screen w-screen flex flex-col overflow-hidden bg-surface-950">
       <!-- Global Top Bar (visible on Home and Editor) -->
-      <header class="glass flex items-center justify-between px-5 py-3 z-50 shrink-0">
+      <header class="glass header-gradient-border flex items-center justify-between px-5 py-3 z-50 shrink-0">
         <div class="flex items-center gap-3">
           <button *ngIf="isEditorRoute()" class="text-surface-400 hover:text-surface-200 text-sm mr-2"
               (click)="goHome()">← Workflows</button>
-          <span class="text-xl">⚡</span>
+          <span class="text-xl logo-glow">⚡</span>
           <h1 class="text-base font-semibold tracking-tight">
             <span class="text-accent-light">M8M</span>
             <span class="text-surface-400 font-normal ml-1.5">Workflow Engine</span>
