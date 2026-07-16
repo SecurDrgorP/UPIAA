@@ -44,7 +44,7 @@ import httpx
 # Temporal heartbeat — imported safely; if Temporal is not in scope
 # (e.g. unit tests) the heartbeat call is skipped gracefully.
 try:
-    from temporalio.activity import heartbeat as temporal_heartbeat
+    from temporalio import activity
     _TEMPORAL_AVAILABLE = True
 except ImportError:
     _TEMPORAL_AVAILABLE = False
@@ -131,7 +131,7 @@ _GETME_TIMEOUT        = 10          # seconds — quick connectivity check on st
             "label":       "Message types to accept",
             "type":        "select",
             "required":    False,
-            "default":     "text",
+            "default":     "all",
             "options": [
                 {"value": "text",  "label": "Text messages only"},
                 {"value": "all",   "label": "All message types"},
@@ -269,9 +269,10 @@ async def handle_telegram_trigger(
             # ── heartbeat ────────────────────────────────────────────────────
             now = time.monotonic()
             if _TEMPORAL_AVAILABLE and (now - last_heartbeat_time) >= _HEARTBEAT_INTERVAL:
-                temporal_heartbeat(
-                    f"telegram_trigger: waiting for message, offset={offset}"
-                )
+                if activity.in_activity():
+                    activity.heartbeat(
+                        f"telegram_trigger: waiting for message, offset={offset}"
+                    )
                 last_heartbeat_time = now
 
             # ── getUpdates ───────────────────────────────────────────────────
