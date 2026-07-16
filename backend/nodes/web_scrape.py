@@ -482,7 +482,7 @@ async def handle_web_scrape(
         output_format = "full"
 
     # ── crawl & scrape ────────────────────────────────────────────────────────
-    ua = "Mozilla/5.0 (compatible; M8M-Bot/1.0; +https://m8m.ai)"
+    ua = "Mozilla/5.0 (compatible; UPIAA-Bot/1.0; +https://UPIAA.ai)"
     visited: set[str] = set()
     queue: list[tuple[str, int]] = [(u, 0) for u in start_urls]
     all_pages: list[dict] = []

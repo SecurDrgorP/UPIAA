@@ -171,11 +171,11 @@ class OpenAIProvider:
                 "  Leave blank to send the entire upstream output as the prompt.\n\n"
                 "── Accessing JSON responses downstream ──────────────────\n"
                 "  If your prompt instructs the model to respond in JSON,\n"
-                "  M8M auto-parses the response. Access fields with:\n"
+                "  UPIAA auto-parses the response. Access fields with:\n"
                 "    {{node_2.response.key}}          — top-level JSON key\n"
                 "    {{node_2.response.items[0].val}} — array element\n"
                 "  If the model wraps JSON in code fences (```json...```)\n"
-                "  M8M strips them automatically.\n"
+                "  UPIAA strips them automatically.\n"
                 "  To embed the full JSON in a message: {{node_2.response}}\n"
                 "  This produces compact JSON, e.g.: {\"key\":\"value\"}\n"
             ),

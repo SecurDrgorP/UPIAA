@@ -36,15 +36,15 @@ async def prometheus_metrics():
                 )
 
             metrics = [
-                f"# HELP m8m_workflows_total Total number of workflows",
-                f"# TYPE m8m_workflows_total gauge",
-                f"m8m_workflows_total {wf_count or 0}",
-                f"# HELP m8m_executions_total Total number of executions",
-                f"# TYPE m8m_executions_total gauge",
-                f"m8m_executions_total {exec_count or 0}",
-                f"# HELP m8m_workflows_published Number of published workflows",
-                f"# TYPE m8m_workflows_published gauge",
-                f"m8m_workflows_published {published_count or 0}",
+                f"# HELP UPIAA_workflows_total Total number of workflows",
+                f"# TYPE UPIAA_workflows_total gauge",
+                f"UPIAA_workflows_total {wf_count or 0}",
+                f"# HELP UPIAA_executions_total Total number of executions",
+                f"# TYPE UPIAA_executions_total gauge",
+                f"UPIAA_executions_total {exec_count or 0}",
+                f"# HELP UPIAA_workflows_published Number of published workflows",
+                f"# TYPE UPIAA_workflows_published gauge",
+                f"UPIAA_workflows_published {published_count or 0}",
             ]
             return PlainTextResponse(
                 content="\n".join(metrics) + "\n",

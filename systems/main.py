@@ -26,7 +26,7 @@ logging.basicConfig(
 # ─── FastAPI Application ─────────────────────────────────────────────────────
 
 app = FastAPI(
-    title="M8M Systems Service",
+    title="UPIAA Systems Service",
     description="AI subsystems: Node Builder, Workflow Builder, Hermies, Tester",
     version="1.0.0",
 )

@@ -472,7 +472,7 @@ async def handle_web_search_scrape(
         concurrency = 3
 
     # ── execute ───────────────────────────────────────────────────────────────
-    ua = "Mozilla/5.0 (compatible; M8M-Bot/1.0; +https://m8m.ai)"
+    ua = "Mozilla/5.0 (compatible; UPIAA-Bot/1.0; +https://UPIAA.ai)"
     async with httpx.AsyncClient(headers={"User-Agent": ua}) as client:
 
         # search

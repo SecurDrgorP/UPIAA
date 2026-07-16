@@ -149,7 +149,7 @@ async def export_workflow(workflow_id: str, db: AsyncSession = Depends(get_db)):
     wf = await db.get(WorkflowModel, workflow_id)
     if not wf:
         raise HTTPException(status_code=404, detail="Workflow not found")
-    return {"workflow": wf.to_api(), "export_version": "1.0", "engine": "M8M"}
+    return {"workflow": wf.to_api(), "export_version": "1.0", "engine": "UPIAA"}
 
 
 @router.post("/workflows/import")

@@ -15,7 +15,7 @@ import { RouterModule, Router } from '@angular/router';
               (click)="goHome()">← Workflows</button>
           <span class="text-xl logo-glow">⚡</span>
           <h1 class="text-base font-semibold tracking-tight">
-            <span class="text-accent-light">M8M</span>
+            <span class="text-accent-light">UPIAA</span>
             <span class="text-surface-400 font-normal ml-1.5">Workflow Engine</span>
           </h1>
         </div>
@@ -49,7 +49,7 @@ export class AppComponent {
 
   constructor(private router: Router) {
     // Restore saved theme preference on startup
-    const saved = localStorage.getItem('m8m-theme');
+    const saved = localStorage.getItem('UPIAA-theme');
     this.isDarkMode = saved !== 'light';
     this.applyTheme();
   }
@@ -65,7 +65,7 @@ export class AppComponent {
   toggleTheme(): void {
     this.isDarkMode = !this.isDarkMode;
     this.applyTheme();
-    localStorage.setItem('m8m-theme', this.isDarkMode ? 'dark' : 'light');
+    localStorage.setItem('UPIAA-theme', this.isDarkMode ? 'dark' : 'light');
   }
 
   private applyTheme(): void {

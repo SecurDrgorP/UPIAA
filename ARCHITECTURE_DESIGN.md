@@ -1,8 +1,8 @@
-# M8M System Architecture Design
+# UPIAA System Architecture Design
 
 ## Executive Summary
 
-The M8M project is an enterprise-grade, agentic workflow automation platform engineered to enable users to visually construct, manage, and execute complex logic chains. Built on a resilient three-tier architecture, M8M integrates robust AI-driven logic nodes with high-availability infrastructure. The system is designed to provide real-time execution feedback while guaranteeing state durability across all workflow operations, ensuring fault tolerance and high reliability even in the event of partial system failures.
+The UPIAA project is an enterprise-grade, agentic workflow automation platform engineered to enable users to visually construct, manage, and execute complex logic chains. Built on a resilient three-tier architecture, UPIAA integrates robust AI-driven logic nodes with high-availability infrastructure. The system is designed to provide real-time execution feedback while guaranteeing state durability across all workflow operations, ensuring fault tolerance and high reliability even in the event of partial system failures.
 
 At its core, the platform leverages Temporal as an orchestration engine, allowing the system to abstract away the complexities of transient failures, retries, and distributed state management. This is coupled with a highly responsive Angular 17 frontend and a highly concurrent FastAPI asynchronous backend, yielding an environment that is optimized for both rapid development and strict production workloads.
 
@@ -10,7 +10,7 @@ At its core, the platform leverages Temporal as an orchestration engine, allowin
 
 ## System Architecture Overview
 
-The M8M ecosystem utilizes a tightly decoupled architecture, communicating over strict HTTP interfaces and managed event streams. The platform boundaries are strategically defined to separate state management, asynchronous workflow execution, and user interaction.
+The UPIAA ecosystem utilizes a tightly decoupled architecture, communicating over strict HTTP interfaces and managed event streams. The platform boundaries are strategically defined to separate state management, asynchronous workflow execution, and user interaction.
 
 The flow of requests generally proceeds as follows:
 1. The user interacts with the Angular visual orchestrator, dragging nodes and connecting endpoints.
@@ -21,7 +21,7 @@ The flow of requests generally proceeds as follows:
 
 
 Demostration diagram image:
-![alt text](Diagrams/M8M_System_Architecture.png)
+![alt text](Diagrams/UPIAA_System_Architecture.png)
 ---
 
 ## Frontend Architecture (Angular 17)
@@ -40,7 +40,7 @@ To avoid polling overhead, the application utilizes Server-Sent Events (EventSou
 
 ## Backend Engine (FastAPI & Temporal)
 
-The M8M backend serves as the traffic director and execution layer, broken down into horizontal API routing and distributed workflow execution.
+The UPIAA backend serves as the traffic director and execution layer, broken down into horizontal API routing and distributed workflow execution.
 
 **FastAPI Controller Layout:**
 The application utilizes **FastAPI** to yield incredibly high throughput via `asyncio`. Controllers are separated via distinct router modules in the `routes/` directory. They consume Pydantic schemas validating all outbound and inbound HTTP interactions, ensuring stringent typing guarantees.
@@ -75,7 +75,7 @@ The `infra/docker-compose.yml` models a complete, containerized environment ensu
 The repository segregates responsibilities intelligently:
 
 ```text
-M8M/
+UPIAA/
 ├── backend/                       # Core python asynchronous execution tier
 │   ├── ai/                        # (DEPRECATED) Legacy AI connection logic 
 │   ├── ai_nodes/                  # Auto-generated workflow nodes produced by System 1

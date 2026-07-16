@@ -1,5 +1,5 @@
 # ═══════════════════════════════════════════════════════════════════════════════
-# M8M Production Docker Compose — 7 services with health checks
+# UPIAA Production Docker Compose — 7 services with health checks
 # Includes systems service for AI subsystems (System 1–4)
 # ═══════════════════════════════════════════════════════════════════════════════
 
@@ -9,16 +9,16 @@ services:
     image: postgres:16-alpine
     restart: unless-stopped
     environment:
-      POSTGRES_USER: ${POSTGRES_USER:-m8m}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-m8m_secret}
-      POSTGRES_DB: ${POSTGRES_DB:-m8m}
+      POSTGRES_USER: ${POSTGRES_USER:-UPIAA}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-UPIAA_secret}
+      POSTGRES_DB: ${POSTGRES_DB:-UPIAA}
     ports:
       - "${POSTGRES_PORT:-5432}:5432"
     volumes:
       - pg_data:/var/lib/postgresql/data
       - ./postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-m8m}"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-UPIAA}"]
       interval: 5s
       timeout: 3s
       retries: 10
@@ -45,8 +45,8 @@ services:
     environment:
       - DB=postgres12
       - DB_PORT=5432
-      - POSTGRES_USER=${POSTGRES_USER:-m8m}
-      - POSTGRES_PWD=${POSTGRES_PASSWORD:-m8m_secret}
+      - POSTGRES_USER=${POSTGRES_USER:-UPIAA}
+      - POSTGRES_PWD=${POSTGRES_PASSWORD:-UPIAA_secret}
       - POSTGRES_SEEDS=postgres
     ports:
       - "7233:7233"
@@ -69,7 +69,7 @@ services:
     restart: unless-stopped
     env_file: ../.env
     environment:
-      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-m8m}:${POSTGRES_PASSWORD:-m8m_secret}@postgres:5432/${POSTGRES_DB:-m8m}
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-UPIAA}:${POSTGRES_PASSWORD:-UPIAA_secret}@postgres:5432/${POSTGRES_DB:-UPIAA}
       TEMPORAL_HOST: temporal:7233
       REDIS_URL: redis://redis:6379/0
       SECRET_VAULT_KEY: ${SECRET_VAULT_KEY:-change-me-in-production}
@@ -127,7 +127,7 @@ services:
     restart: on-failure:5
     env_file: ../.env
     environment:
-      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-m8m}:${POSTGRES_PASSWORD:-m8m_secret}@postgres:5432/${POSTGRES_DB:-m8m}
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-UPIAA}:${POSTGRES_PASSWORD:-UPIAA_secret}@postgres:5432/${POSTGRES_DB:-UPIAA}
       TEMPORAL_HOST: temporal:7233
       REDIS_URL: redis://redis:6379/0
       SECRET_VAULT_KEY: ${SECRET_VAULT_KEY:-change-me-in-production}

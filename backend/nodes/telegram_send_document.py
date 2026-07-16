@@ -16,7 +16,7 @@ QUICK START
   1. Paste your Telegram Bot token.
   2. Set the target chat/group/channel ID.
   3. Set file_path to the document to send, e.g.
-     /tmp/m8m_docs/{{node_d1.response}}.docx
+     /tmp/UPIAA_docs/{{node_d1.response}}.docx
   4. Optionally add a caption.
 
 OUTPUT FIELDS
@@ -38,7 +38,7 @@ from core.expressions import resolve_template, apply_output_mapping
 logger = logging.getLogger(__name__)
 
 # ── Constants ──────────────────────────────────────────────────────────────────
-ALLOWED_DIR = "/tmp/m8m_docs/"
+ALLOWED_DIR = "/tmp/UPIAA_docs/"
 MAX_FILE_SIZE = 50 * 1024 * 1024  # 50 MB — Telegram Bot API limit for documents
 
 
@@ -88,9 +88,9 @@ MAX_FILE_SIZE = 50 * 1024 * 1024  # 50 MB — Telegram Bot API limit for documen
             "label": "File Path",
             "required": True,
             "template": True,
-            "placeholder": "/tmp/m8m_docs/{{node_d1.response}}.docx",
+            "placeholder": "/tmp/UPIAA_docs/{{node_d1.response}}.docx",
             "description": (
-                "Absolute path to the file to upload. Must be under /tmp/m8m_docs/. "
+                "Absolute path to the file to upload. Must be under /tmp/UPIAA_docs/. "
                 "Supports {{node_id.field}} interpolation."
             ),
         },

@@ -1,12 +1,12 @@
-# M8M Agentic AI Platform — Complete Node & Expression Guide
+# UPIAA Agentic AI Platform — Complete Node & Expression Guide
 
-Welcome to the definitive guide for all execution and trigger nodes in the M8M platform. This document covers the architecture of the workflow engine, how data flows between nodes, how to write expressions, and details every single node type in the system.
+Welcome to the definitive guide for all execution and trigger nodes in the UPIAA platform. This document covers the architecture of the workflow engine, how data flows between nodes, how to write expressions, and details every single node type in the system.
 
 ---
 
-## 1. M8M Core Architecture & Data Flow
+## 1. UPIAA Core Architecture & Data Flow
 
-M8M is a distributed, event-driven, agentic workflow orchestration engine built on top of **Temporal**. 
+UPIAA is a distributed, event-driven, agentic workflow orchestration engine built on top of **Temporal**. 
 
 ### How Nodes Execute
 * **State Isolation**: Each node runs as a separate Temporal activity. When a node executes, it receives a configuration object (`config`) and a flat-merged dictionary of all preceding outputs (`input_data`), along with the full execution history (`context`).
@@ -22,7 +22,7 @@ When a node completes successfully, its output is stored in the execution state 
 
 ## 2. The Expression Engine
 
-M8M uses a custom regex-based template interpolation engine to inject dynamic data into config fields. Any field marked as `"template": True` supports this syntax.
+UPIAA uses a custom regex-based template interpolation engine to inject dynamic data into config fields. Any field marked as `"template": True` supports this syntax.
 
 ### Basic Shorthand Syntax (Recommended)
 You can directly reference variables in the format `{{node_id.property}}`:
@@ -63,7 +63,7 @@ Conditional nodes (e.g., `control_flow` and `cron_conditional`) evaluate boolean
   - List Indexing: `context['node_4']['items'][0]` (returns `None` if the list is empty or index is out of bounds, avoiding index crashes).
 
 ### LLM Response Sanitization
-When using LLMs to generate conditional logic, they frequently output strings with artifacts like trailing periods, quotation marks, or mixed casing. M8M automatically pre-processes conditions to ensure compatibility:
+When using LLMs to generate conditional logic, they frequently output strings with artifacts like trailing periods, quotation marks, or mixed casing. UPIAA automatically pre-processes conditions to ensure compatibility:
 * Strips trailing periods: `True.` $\rightarrow$ `True`
 * Strips surrounding quotes: `"True"` $\rightarrow$ `True`
 * Standardizes casing: `true` / `false` $\rightarrow$ `True` / `False`
@@ -341,7 +341,7 @@ Below is the catalog of all execution and trigger nodes, organized by functional
 * **Config Keys**:
   - `bot_token` (string, required, secret): Discord Bot token.
   - `channel_id` (string, required, template): Target Discord channel ID.
-  - `file_path` (string, required, template): Absolute path to the file. Must be under `/tmp/m8m_docs/`. E.g. `/tmp/m8m_docs/{{node_d1.response}}.docx`.
+  - `file_path` (string, required, template): Absolute path to the file. Must be under `/tmp/UPIAA_docs/`. E.g. `/tmp/UPIAA_docs/{{node_d1.response}}.docx`.
   - `message` (string, optional, template): Caption text above the attachment.
   - `embed_enabled` (boolean): Add a rich embed card alongside the file.
   - `embed_title` (string, template) / `embed_color` (number): Embed customization.
@@ -350,7 +350,7 @@ Below is the catalog of all execution and trigger nodes, organized by functional
   - `message_id` (string): Discord message ID.
   - `file_name` (string): Basename of the uploaded file.
   - `channel_id` (string): Target channel ID.
-* **Limits**: Max 25 MB file size (Discord upload limit). Files must be under `/tmp/m8m_docs/`.
+* **Limits**: Max 25 MB file size (Discord upload limit). Files must be under `/tmp/UPIAA_docs/`.
 
 #### 💬 Telegram Trigger (`telegram_trigger`)
 * **Description**: Listens for incoming Telegram messages using long-polling (`getUpdates`). Place this node at the **start** of a workflow — it blocks until a qualifying message arrives, then passes it downstream.
@@ -395,7 +395,7 @@ Below is the catalog of all execution and trigger nodes, organized by functional
   - `credential_id` (string): Optional encrypted credential bundle containing `bot_token`.
   - `bot_token` (string, secret): Manual bot token — only shown when no credential bundle is selected.
   - `chat_id` (string, required, template): Target chat, group, or channel ID.
-  - `file_path` (string, required, template): Absolute path to the file. Must be under `/tmp/m8m_docs/`.
+  - `file_path` (string, required, template): Absolute path to the file. Must be under `/tmp/UPIAA_docs/`.
   - `caption` (string, optional, template): Caption sent with the document.
   - `parse_mode` (select): `Markdown`, `MarkdownV2`, `HTML`, or plain text.
   - `disable_notification` (boolean): Silent delivery.
@@ -404,7 +404,7 @@ Below is the catalog of all execution and trigger nodes, organized by functional
   - `message_id` (number): Telegram message ID.
   - `file_name` (string): Basename of the uploaded file.
   - `chat_id` (string): Target chat ID.
-* **Limits**: Max 50 MB file size (Telegram Bot API limit). Files must be under `/tmp/m8m_docs/`.
+* **Limits**: Max 50 MB file size (Telegram Bot API limit). Files must be under `/tmp/UPIAA_docs/`.
 
 #### 📤 Send Email (`send_email`)
 * **Description**: Sends emails via SMTP hosts, with optional file attachments.
@@ -414,7 +414,7 @@ Below is the catalog of all execution and trigger nodes, organized by functional
   - `to` (string, required, template): Recipient addresses (comma-separated).
   - `subject` / `body` (string, template).
   - `content_type` (select): `plain` or `html`.
-  - `attachments` (string, template): JSON array of local file paths to attach. E.g. `["/tmp/m8m_docs/report.docx"]`. Files must be under `/tmp/m8m_docs/`. Parsed with `json.loads()` (consistent with `excel_document`'s `rows_json` pattern).
+  - `attachments` (string, template): JSON array of local file paths to attach. E.g. `["/tmp/UPIAA_docs/report.docx"]`. Files must be under `/tmp/UPIAA_docs/`. Parsed with `json.loads()` (consistent with `excel_document`'s `rows_json` pattern).
 * **Output fields**:
   - `sent` (boolean): `true`.
   - `from` / `to` / `subject` (string).

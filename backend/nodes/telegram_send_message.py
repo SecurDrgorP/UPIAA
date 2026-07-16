@@ -54,7 +54,7 @@ from core.expressions import apply_output_mapping
             "required": True,
             "multiline": True,
             "template": True,
-            "placeholder": "Hello from M8M! Result: {{n1.response}}",
+            "placeholder": "Hello from UPIAA! Result: {{n1.response}}",
             "description": "Message text. Supports {{node_id.field}} interpolation.",
         },
         "parse_mode": {
@@ -95,7 +95,7 @@ from core.expressions import apply_output_mapping
         "sent": True,
         "message_id": 42,
         "chat_id": "-1001234567890",
-        "text": "Hello from M8M!",
+        "text": "Hello from UPIAA!",
     },
 )
 async def handle_telegram_send_message(

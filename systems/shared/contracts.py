@@ -13,7 +13,7 @@ from pydantic import BaseModel, Field
 # ── System 1: Node Generation ────────────────────────────────────────────────
 
 class SpecContract(BaseModel):
-    """Specification for a new M8M node, produced by SpecWriter."""
+    """Specification for a new UPIAA node, produced by SpecWriter."""
     node_type: str = Field(..., description="Snake_case node type, e.g. 'slack_sender'")
     label: str = Field(..., description="Human-readable label, e.g. 'Slack Sender'")
     icon: str = Field(..., description="Emoji icon, e.g. '💬'")
@@ -30,7 +30,7 @@ class SpecContract(BaseModel):
 
 
 class CodeContract(BaseModel):
-    """Generated M8M node code, produced by CodeGenerator."""
+    """Generated UPIAA node code, produced by CodeGenerator."""
     filename: str = Field(..., description="Filename, e.g. 'slack_sender.py'")
     code: str = Field(
         ...,

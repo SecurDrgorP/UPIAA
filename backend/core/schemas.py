@@ -1,5 +1,5 @@
 """
-M8M — Pydantic v2 Schemas for the Agentic AI Workflow Engine.
+UPIAA — Pydantic v2 Schemas for the Agentic AI Workflow Engine.
 Defines all node types, workflow structures, and execution models.
 """
 

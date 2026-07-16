@@ -1,7 +1,7 @@
 """
 nodes/timer_cron.py
 ────────────────────────────────────────────────────────────────────────────
-Timer / Cron Trigger node for the M8M Agentic AI Workflow Engine.
+Timer / Cron Trigger node for the UPIAA Agentic AI Workflow Engine.
 
 BEHAVIOR:
   This node BLOCKS execution until the configured schedule condition is met.

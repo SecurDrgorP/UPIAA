@@ -18,7 +18,7 @@ import { Workflow } from '../models/workflow.models';
         <div class="home-hero mb-10">
           <div class="flex items-start justify-between gap-6">
             <div>
-              <div class="home-hero-label">M8M Workflow Engine</div>
+              <div class="home-hero-label">UPIAA Workflow Engine</div>
               <h1 class="home-hero-title">Your Workflows</h1>
               <p class="home-hero-sub">Build, connect, and run agentic AI automations visually</p>
             </div>

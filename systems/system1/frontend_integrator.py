@@ -15,9 +15,9 @@ from shared.contracts import FrontendContract, SpecContract
 logger = logging.getLogger(__name__)
 
 
-SYSTEM_PROMPT = """You are a frontend integration expert for M8M, a workflow automation platform.
+SYSTEM_PROMPT = """You are a frontend integration expert for UPIAA, a workflow automation platform.
 
-Given an M8M node specification, generate frontend hints as JSON:
+Given an UPIAA node specification, generate frontend hints as JSON:
 {
     "icon": "single emoji representing this node",
     "accent_color": "#hexcolor for the node's accent",
@@ -32,7 +32,7 @@ Rules:
 
 
 class FrontendIntegrator:
-    """Generates frontend integration hints for generated M8M nodes."""
+    """Generates frontend integration hints for generated UPIAA nodes."""
 
     @classmethod
     async def generate(cls, spec: SpecContract | Dict[str, Any]) -> FrontendContract:
@@ -43,7 +43,7 @@ class FrontendIntegrator:
             spec_data = spec
 
         prompt = (
-            f"Generate frontend integration hints for this M8M node:\n"
+            f"Generate frontend integration hints for this UPIAA node:\n"
             f"{json.dumps(spec_data, indent=2)}"
         )
 

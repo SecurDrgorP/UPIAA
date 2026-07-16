@@ -21,7 +21,7 @@ BACKEND_URL = os.getenv("BACKEND_URL", "http://backend:8000")
 
 
 class Deployer:
-    """Deploys generated M8M node files and triggers registry reload."""
+    """Deploys generated UPIAA node files and triggers registry reload."""
 
     @classmethod
     async def deploy(cls, files: Dict[str, str]) -> Dict[str, Any]:

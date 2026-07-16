@@ -2,7 +2,7 @@
 Secret Vault — Fernet + PBKDF2HMAC encryption for storing secrets in PostgreSQL.
 
 Resolution order:
-  1. Environment variable M8M_SECRET_<KEY_NAME>
+  1. Environment variable UPIAA_SECRET_<KEY_NAME>
   2. PostgreSQL secrets table (Fernet-encrypted)
   3. Redis (legacy fallback)
 """
@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 
 # ── Derive Fernet key from vault passphrase ──────────────────────────────────
 _VAULT_KEY = os.getenv("SECRET_VAULT_KEY", "change-me-in-production")
-_SALT = b"m8m-secret-vault"  # Static salt (key is already unique per deployment)
+_SALT = b"UPIAA-secret-vault"  # Static salt (key is already unique per deployment)
 
 _DEFAULT_VAULT_KEY = "change-me-in-production"
 if _VAULT_KEY == _DEFAULT_VAULT_KEY:
@@ -59,7 +59,7 @@ class SecretVault:
         Resolve a secret reference {{$secret.<key_name>}}.
 
         Resolution order:
-          1. Environment variable M8M_SECRET_<KEY_NAME>
+          1. Environment variable UPIAA_SECRET_<KEY_NAME>
           2. PostgreSQL secrets table
           3. Redis (legacy)
         """
@@ -70,7 +70,7 @@ class SecretVault:
         key_name = match.group(1)
 
         # 1. Environment variable
-        env_key = f"M8M_SECRET_{key_name.upper()}"
+        env_key = f"UPIAA_SECRET_{key_name.upper()}"
         env_val = os.getenv(env_key)
         if env_val is not None:
             return env_val

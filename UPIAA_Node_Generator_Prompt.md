@@ -1,4 +1,4 @@
-# M8M Node Generator Prompt
+# UPIAA Node Generator Prompt
 
 > Copy this entire prompt, fill in the `[PLACEHOLDERS]`, and send to any LLM.
 > The output will be a ready-to-drop-in Python file for `backend/nodes/`.
@@ -7,8 +7,8 @@
 
 ## PROMPT START — copy everything below this line
 
-You are a senior Python engineer on the **M8M Agentic AI Workflow Engine**.
-Your task is to generate a single, production-ready Python file for a new **M8M node**.
+You are a senior Python engineer on the **UPIAA Agentic AI Workflow Engine**.
+Your task is to generate a single, production-ready Python file for a new **UPIAA node**.
 
 ---
 
@@ -24,7 +24,7 @@ Outputs    : [describe what dict keys the node should return on success]
 
 ---
 
-### 2 — M8M ARCHITECTURE RULES  (read carefully — do not deviate)
+### 2 — UPIAA ARCHITECTURE RULES  (read carefully — do not deviate)
 
 #### 2.1 File location & auto-discovery
 - Drop the file in `backend/nodes/<node_type>.py`.
@@ -197,13 +197,13 @@ from core.expressions import resolve_template, apply_output_mapping
             "required": True,
             "multiline": True,
             "template": True,
-            "placeholder": "Hello from M8M! Result: {{n1.response}}",
+            "placeholder": "Hello from UPIAA! Result: {{n1.response}}",
             "description": "Message text. Supports {{node_id.field}} interpolation.",
         },
         "username": {
             "type": "string",
             "label": "Bot Username",
-            "default": "M8M Workflow",
+            "default": "UPIAA Workflow",
             "description": "Display name for the bot.",
         },
         "icon_emoji": {
@@ -222,7 +222,7 @@ from core.expressions import resolve_template, apply_output_mapping
     example_output={
         "sent": True,
         "channel": "#general",
-        "message": "Hello from M8M!",
+        "message": "Hello from UPIAA!",
         "status_code": 200,
     },
 )
@@ -243,7 +243,7 @@ async def handle_slack_notify(
         return {"error": "missing field: message — cannot send an empty message", "__input_error__": True}
 
     channel      = config.get("channel", "").strip() or None
-    username     = config.get("username", "M8M Workflow")
+    username     = config.get("username", "UPIAA Workflow")
     icon_emoji   = config.get("icon_emoji", ":robot_face:")
 
     # ── Build payload ─────────────────────────────────────────────────────────

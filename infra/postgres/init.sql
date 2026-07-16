@@ -1,5 +1,5 @@
 -- ═══════════════════════════════════════════════════════════════════════════════
--- M8M PostgreSQL Initialization
+-- UPIAA PostgreSQL Initialization
 -- Creates extensions and initial schema. Alembic manages migrations after this.
 -- ═══════════════════════════════════════════════════════════════════════════════
 
