@@ -1,5 +1,5 @@
 """
-M8M — Agentic AI Workflow Engine (Backend)
+UPIAA — Agentic AI Workflow Engine (Backend)
 FastAPI application with PostgreSQL, Temporal, Redis, and WebSocket streaming.
 
 Thin dispatch: all route handlers live in backend/routes/*.
@@ -83,12 +83,12 @@ async def lifespan(app: FastAPI):
     logger.info("Database tables initialized")
     yield
     # Shutdown
-    logger.info("Shutting down M8M backend")
+    logger.info("Shutting down UPIAA backend")
 
 
 # ─── FastAPI Application ─────────────────────────────────────────────────────
 app = FastAPI(
-    title="M8M — Agentic AI Workflow Engine",
+    title="UPIAA — Agentic AI Workflow Engine",
     description="Automated Agentic AI Workflow Generator with PostgreSQL, Temporal, and LLM orchestration",
     version="1.0.0",
     lifespan=lifespan,
@@ -130,7 +130,7 @@ async def _send_ws_keepalive(websocket: WebSocket, exec_id: str | None) -> None:
 @app.get("/pipeline/status")
 async def pipeline_status_stub():
     """Silence 404 noise from external monitoring tools."""
-    return {"status": "ok", "pipeline": "m8m-backend"}
+    return {"status": "ok", "pipeline": "UPIAA-backend"}
 
 # ─── Webhook Routes (catch-all — must be LAST) ──────────────────────────────
 from core.webhook_registry import register_webhook_routes
@@ -198,7 +198,7 @@ print("OK")
 """
         with tempfile.NamedTemporaryFile(
             mode="w", suffix=".py", dir="/tmp",
-            prefix="_m8m_backendtest_", delete=False,
+            prefix="_UPIAA_backendtest_", delete=False,
         ) as f:
             f.write(test_script)
             tmp_script_path = f.name

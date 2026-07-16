@@ -1,8 +1,8 @@
 """
 Systems — System 1 — Code Generator
 
-Generates a complete M8M node Python file from a SpecContract.
-Output follows the canonical M8M node contract:
+Generates a complete UPIAA node Python file from a SpecContract.
+Output follows the canonical UPIAA node contract:
   - from core.node_registry import register_action
   - @register_action(type=..., label=..., icon=..., ...)
   - async def handle_{node_type}(config, input_data, context) -> dict
@@ -17,10 +17,10 @@ from shared.contracts import SpecContract, CodeContract
 logger = logging.getLogger(__name__)
 
 
-# ── M8M Node Code Generation Prompt ─────────────────────────────────────────
-SYSTEM_PROMPT = """You are an expert Python developer writing M8M workflow nodes.
+# ── UPIAA Node Code Generation Prompt ─────────────────────────────────────────
+SYSTEM_PROMPT = """You are an expert Python developer writing UPIAA workflow nodes.
 
-Given a node specification, generate a COMPLETE Python file that follows the M8M node contract.
+Given a node specification, generate a COMPLETE Python file that follows the UPIAA node contract.
 
 The file MUST follow this EXACT structure:
 
@@ -68,11 +68,11 @@ Return ONLY valid JSON: {{"filename": "node_type.py", "code": "the complete Pyth
 
 
 class CodeGenerator:
-    """Generates M8M node Python files from specifications."""
+    """Generates UPIAA node Python files from specifications."""
 
     @classmethod
     async def generate(cls, spec: SpecContract | Dict[str, Any]) -> CodeContract:
-        """Generate an M8M node Python file from a specification."""
+        """Generate an UPIAA node Python file from a specification."""
         import json
 
         if isinstance(spec, SpecContract):
@@ -81,7 +81,7 @@ class CodeGenerator:
             spec_dict = spec
 
         prompt = (
-            f"Generate a complete M8M node Python file for this specification:\n"
+            f"Generate a complete UPIAA node Python file for this specification:\n"
             f"{json.dumps(spec_dict, indent=2)}\n\n"
             f"The handler function must be named: handle_{spec_dict['node_type']}"
         )

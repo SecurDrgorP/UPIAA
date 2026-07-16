@@ -2,7 +2,7 @@
 Temporal Worker — Production-grade with dual task queues.
 
 TASK QUEUES:
-  m8m-workflows    — Standard workflow execution (nodes, loops, control flow)
+  UPIAA-workflows    — Standard workflow execution (nodes, loops, control flow)
   ai-activities    — AI-layer operations (Hermies, System1, System2)
 """
 
@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 
 # ── Environment ───────────────────────────────────────────────────────────────
 TEMPORAL_HOST      = os.getenv("TEMPORAL_HOST", "localhost:7233")
-TASK_QUEUE         = "m8m-workflows"
+TASK_QUEUE         = "UPIAA-workflows"
 AI_TASK_QUEUE      = "ai-activities"
 PUBLISH_COOLDOWN   = int(os.getenv("PUBLISH_COOLDOWN_SECONDS", "10"))
 WORKER_CONCURRENCY = int(os.getenv("WORKER_MAX_CONCURRENT_ACTIVITIES", "20"))
@@ -537,7 +537,7 @@ async def get_temporal_client() -> Client:
 async def run_worker() -> None:
     """
     Start the Temporal worker with dual task queues.
-    Both m8m-workflows and ai-activities are handled.
+    Both UPIAA-workflows and ai-activities are handled.
     """
     client = await Client.connect(TEMPORAL_HOST)
 

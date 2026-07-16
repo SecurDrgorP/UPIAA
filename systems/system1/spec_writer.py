@@ -14,11 +14,11 @@ from shared.contracts import SpecContract
 logger = logging.getLogger(__name__)
 
 
-# ── M8M Node Specification Prompt ────────────────────────────────────────────
-SYSTEM_PROMPT = """You are an expert M8M workflow node architect. Given a user's request,
-produce a JSON specification for a single M8M workflow node.
+# ── UPIAA Node Specification Prompt ────────────────────────────────────────────
+SYSTEM_PROMPT = """You are an expert UPIAA workflow node architect. Given a user's request,
+produce a JSON specification for a single UPIAA workflow node.
 
-An M8M node is a self-contained action in an automation workflow (similar to n8n or Zapier).
+An UPIAA node is a self-contained action in an automation workflow (similar to n8n or Zapier).
 Each node has a type, config schema, and a handler function.
 
 You MUST return valid JSON with exactly these fields:
@@ -47,14 +47,14 @@ Rules:
 
 
 class SpecWriter:
-    """Generates structured M8M node specifications from prompts."""
+    """Generates structured UPIAA node specifications from prompts."""
 
     @classmethod
     async def write(
         cls, prompt: str, context: Dict[str, Any] = None
     ) -> SpecContract:
-        """Generate an M8M node specification from a natural language prompt."""
-        user_prompt = f"Create an M8M workflow node for: {prompt}"
+        """Generate an UPIAA node specification from a natural language prompt."""
+        user_prompt = f"Create an UPIAA workflow node for: {prompt}"
 
         if context:
             import json

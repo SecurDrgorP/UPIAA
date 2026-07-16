@@ -13,7 +13,7 @@ from core.expressions import resolve_template, apply_output_mapping
 
 logger = logging.getLogger(__name__)
 
-ALLOWED_DIR = "/tmp/m8m_docs/"
+ALLOWED_DIR = "/tmp/UPIAA_docs/"
 
 
 async def execute_send_email(config: dict[str, Any], input_data: dict[str, Any]) -> dict[str, Any]:
@@ -48,7 +48,7 @@ async def execute_send_email(config: dict[str, Any], input_data: dict[str, Any])
             return {
                 "error": (
                     "attachments must be a valid JSON array of file paths, "
-                    f'e.g. ["/tmp/m8m_docs/report.docx"]. Got: {attachments_raw!r}'
+                    f'e.g. ["/tmp/UPIAA_docs/report.docx"]. Got: {attachments_raw!r}'
                 ),
                 "__input_error__": True,
             }
@@ -178,11 +178,11 @@ async def execute_send_email(config: dict[str, Any], input_data: dict[str, Any])
             "label": "Attachments (JSON array)",
             "required": False,
             "template": True,
-            "placeholder": '["/tmp/m8m_docs/{{node_d7.output_path}}"]',
+            "placeholder": '["/tmp/UPIAA_docs/{{node_d7.output_path}}"]',
             "description": (
                 'JSON array of local file paths to attach. '
-                'Example: ["/tmp/m8m_docs/report.docx", "/tmp/m8m_docs/data.xlsx"]. '
-                'Files must be under /tmp/m8m_docs/. Supports {{expression}} interpolation.'
+                'Example: ["/tmp/UPIAA_docs/report.docx", "/tmp/UPIAA_docs/data.xlsx"]. '
+                'Files must be under /tmp/UPIAA_docs/. Supports {{expression}} interpolation.'
             ),
         },
         "output_mapping": {

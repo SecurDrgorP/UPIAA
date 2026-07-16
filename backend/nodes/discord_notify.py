@@ -40,7 +40,7 @@ from core.expressions import resolve_template, apply_output_mapping
             "required": True,
             "multiline": True,
             "template": True,
-            "placeholder": "Hello from M8M! Result: {{n1.response}}",
+            "placeholder": "Hello from UPIAA! Result: {{n1.response}}",
             "description": "The message content to send. Supports {{node_id.field}} interpolation.",
         },
         "embed_enabled": {

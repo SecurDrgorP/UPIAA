@@ -15,7 +15,7 @@ OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "qwen3-vl")
 @router.get("/")
 async def root():
     return {
-        "service": "M8M Agentic AI Workflow Engine",
+        "service": "UPIAA Agentic AI Workflow Engine",
         "version": "1.0.0",
         "status": "running",
         "database": "postgresql",

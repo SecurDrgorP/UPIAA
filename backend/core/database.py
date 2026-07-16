@@ -9,7 +9,7 @@ from sqlalchemy.orm import DeclarativeBase
 
 DATABASE_URL = os.getenv(
     "DATABASE_URL",
-    "postgresql+asyncpg://m8m:m8m_secret@localhost:5432/m8m",
+    "postgresql+asyncpg://UPIAA:UPIAA_secret@localhost:5432/UPIAA",
 )
 
 # Pool tuning — configurable via environment

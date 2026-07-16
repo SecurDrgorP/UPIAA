@@ -40,7 +40,7 @@ class WorkflowAssembler:
             type_docs.append(entry)
         types_section = "\n".join(type_docs) if type_docs else "- http_request, timer, send_email, ollama_action"
 
-        system_prompt = f"""You are an expert M8M Workflow Architect. Convert the user's request into a valid JSON workflow.
+        system_prompt = f"""You are an expert UPIAA Workflow Architect. Convert the user's request into a valid JSON workflow.
 
 Return JSON with this structure:
 {{

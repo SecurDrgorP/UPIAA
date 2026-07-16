@@ -23,7 +23,7 @@ FROM nginx:alpine AS production
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 
 # Copy built app from builder
-COPY --from=prod-builder /app/dist/m8m-frontend/browser /usr/share/nginx/html
+COPY --from=prod-builder /app/dist/UPIAA-frontend/browser /usr/share/nginx/html
 
 EXPOSE 80
 CMD ["nginx", "-g", "daemon off;"]

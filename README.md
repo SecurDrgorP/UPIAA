@@ -1,5 +1,5 @@
 <div align="center">
-  <h1>M8M: Agentic Workflow Automation</h1>
+  <h1>UPIAA: Agentic Workflow Automation</h1>
   <p><strong>A production-grade, agentic workflow engine featuring real-time AI execution, resilient LLM interactions, and reactive visual orchestration.</strong></p>
 
   [![Angular](https://img.shields.io/badge/Angular-DD0031?style=for-the-badge&logo=angular&logoColor=white)](https://angular.io/)
@@ -12,7 +12,7 @@
 
 ## Overview & Architecture
 
-M8M is an advanced agentic workflow automation platform designed to reliably execute complex, multi-step processes involving LLMs and external integrations. Built for scale and resilience, it orchestrates automated tasks using Temporal to guarantee state durability across node executions.
+UPIAA is an advanced agentic workflow automation platform designed to reliably execute complex, multi-step processes involving LLMs and external integrations. Built for scale and resilience, it orchestrates automated tasks using Temporal to guarantee state durability across node executions.
 
 The system is structured into four primary tiers:
 - **Frontend (Angular 17):** A reactive visual node editor powered by Tailwind CSS and real-time SSE (Server-Sent Events) for live execution feedback and state management.
@@ -41,7 +41,7 @@ Follow these steps to initialize the complete production stack locally using Doc
 ### Installation
 
 1. **Clone the repository and set up environments:**
-   Navigate into the infrastructure folder to spin up the M8M stack:
+   Navigate into the infrastructure folder to spin up the UPIAA stack:
    ```bash
    cd infra
    
@@ -66,7 +66,7 @@ Follow these steps to initialize the complete production stack locally using Doc
 
 Once the stack is spun up, you can interact with the different layers:
 
-- **Web Interface:** Open `http://localhost:80` in your browser to access the M8M Visual Builder. Here you can drag, drop, and connect execution nodes.
+- **Web Interface:** Open `http://localhost:80` in your browser to access the UPIAA Visual Builder. Here you can drag, drop, and connect execution nodes.
 - **API Documentation:** Visit `http://localhost:8000/docs` to test the FastAPI backend endpoints manually.
 - **Temporal Web UI:** Access the local Temporal cluster UI typically on `http://localhost:8233` (if exposed, or use `tctl` within the docker network) to inspect workflow execution history.
 
@@ -83,8 +83,8 @@ uvicorn main:app --reload
 ## Repository Structure
 
 ```text
-M8M/
-M8M/
+UPIAA/
+UPIAA/
 ├── backend/            # FastAPI core, Temporal workflows & HTTP routing
 │   ├── ai_nodes/       # Auto-loaded AI generated node implementations (bind mounted)
 │   ├── core/           # Configuration, security vaults, and registry 

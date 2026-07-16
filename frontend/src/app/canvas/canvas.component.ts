@@ -1185,7 +1185,7 @@ export class CanvasComponent implements OnInit, OnDestroy {
         const exportData = {
             workflow: wf,
             export_version: '1.0',
-            engine: 'M8M',
+            engine: 'UPIAA',
         };
         const json = JSON.stringify(exportData, null, 2);
 
@@ -1354,7 +1354,7 @@ export class CanvasComponent implements OnInit, OnDestroy {
             workflow: this.workflowName,
             workflow_id: this.workflowId,
             timestamp: new Date().toISOString(),
-            engine: 'M8M',
+            engine: 'UPIAA',
             summary: {
                 total_nodes: execNodes.length,
                 executed: executedNodes.length,

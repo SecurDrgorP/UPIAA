@@ -22,7 +22,7 @@ FORBIDDEN_IMPORTS = {"core.orchestrator", "nodes"}
 
 
 class Validator:
-    """Validates generated M8M node code without exec()."""
+    """Validates generated UPIAA node code without exec()."""
 
     @classmethod
     async def validate(cls, code_or_files: Any, node_type: str = "") -> Dict[str, Any]:

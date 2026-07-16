@@ -1,6 +1,6 @@
 # FILE: backend/nodes/webhook_trigger.py
 #
-# Webhook Trigger Node — M8M
+# Webhook Trigger Node — UPIAA
 # ─────────────────────────────────────────────────────────────────────────────
 #
 # ARCHITECTURE NOTE — why this node works the way it does

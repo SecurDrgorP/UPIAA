@@ -14,7 +14,7 @@ from shared.contracts import IntentResult
 logger = logging.getLogger(__name__)
 
 
-SYSTEM_PROMPT = """You are an intent classifier for M8M, an AI workflow automation platform.
+SYSTEM_PROMPT = """You are an intent classifier for UPIAA, an AI workflow automation platform.
 
 Your job is to determine if the user wants to:
 1. BUILD a workflow (type: "workflow_request") — they want to automate something

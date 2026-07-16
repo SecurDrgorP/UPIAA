@@ -215,8 +215,8 @@ class OpenRouterProvider(OpenAIProvider):
         }
         headers = {
             "Authorization": f"Bearer {self.api_key}",
-            "HTTP-Referer": "https://m8m.workflow.app",
-            "X-Title": "M8M Workflow",
+            "HTTP-Referer": "https://UPIAA.workflow.app",
+            "X-Title": "UPIAA Workflow",
             "Content-Type": "application/json",
         }
 

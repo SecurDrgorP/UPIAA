@@ -1,6 +1,6 @@
 # FILE: backend/nodes/telegram_trigger.py
 #
-# Telegram Trigger Node — M8M
+# Telegram Trigger Node — UPIAA
 # ─────────────────────────────────────────────────────────────────────────────
 # A LISTENER / TRIGGER node. It sits at the START of a workflow and blocks
 # (non-blocking async poll) until a new Telegram message arrives, then passes

@@ -1,5 +1,5 @@
 # ═══════════════════════════════════════════════════════════════════════════════
-# M8M Backend — Multi-stage Dockerfile
+# UPIAA Backend — Multi-stage Dockerfile
 # Stage 1: deps only (cacheable)
 # Stage 2: development (with source, hot-reload)
 # Stage 3: production (optimized, non-root)
@@ -31,7 +31,7 @@ CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
 # ── Stage 3: Production ─────────────────────────────────────────────────────
 FROM deps AS production
 
-RUN groupadd -r m8m && useradd -r -g m8m -d /app -s /sbin/nologin m8m
+RUN groupadd -r UPIAA && useradd -r -g UPIAA -d /app -s /sbin/nologin UPIAA
 
 WORKDIR /app
 COPY . .
@@ -41,8 +41,8 @@ RUN mkdir -p /app/storage/models && \
     python scripts/generate_demo_model.py
 
 # Drop to non-root
-RUN chown -R m8m:m8m /app
-USER m8m
+RUN chown -R UPIAA:UPIAA /app
+USER UPIAA
 
 EXPOSE 8000
 CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "2"]

@@ -1,5 +1,5 @@
 /**
- * tailwind.config.js — M8M Design System
+ * tailwind.config.js — UPIAA Design System
  *
  * ALL colors are CSS-variable-backed. No hardcoded hex values live here.
  * The full palette is declared in styles.css :root / .dark blocks.

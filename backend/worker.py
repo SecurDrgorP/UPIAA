@@ -1,8 +1,8 @@
 """
-M8M Temporal Worker — Dual task queue entry point with SIGTERM drain.
+UPIAA Temporal Worker — Dual task queue entry point with SIGTERM drain.
 
 Runs as a separate container in Docker Compose.
-Handles both the standard 'm8m-workflows' queue and the 'ai-activities' queue
+Handles both the standard 'UPIAA-workflows' queue and the 'ai-activities' queue
 for AI-layer operations.
 """
 
@@ -44,7 +44,7 @@ async def main():
     signal.signal(signal.SIGTERM, _handle_sigterm)
     signal.signal(signal.SIGINT, _handle_sigterm)
 
-    logger.info("Starting M8M Temporal worker (dual queue)")
+    logger.info("Starting UPIAA Temporal worker (dual queue)")
 
     try:
         worker_task = asyncio.create_task(run_worker())
@@ -63,7 +63,7 @@ async def main():
             except asyncio.CancelledError:
                 pass
 
-        logger.info("M8M Temporal worker stopped gracefully")
+        logger.info("UPIAA Temporal worker stopped gracefully")
 
     except Exception as e:
         logger.exception(f"Worker fatal error: {e}")

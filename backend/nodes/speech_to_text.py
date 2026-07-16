@@ -1,6 +1,6 @@
 # FILE: backend/nodes/speech_to_text.py
 #
-# Speech-to-Text — M8M (Multi-Provider)
+# Speech-to-Text — UPIAA (Multi-Provider)
 # ─────────────────────────────────────────────────────────────────────────────
 # Transcribes audio files to text using a hosted speech-to-text API.
 #

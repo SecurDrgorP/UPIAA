@@ -3,7 +3,7 @@
     "version": 1,
     "newProjectRoot": "projects",
     "projects": {
-        "m8m-frontend": {
+        "UPIAA-frontend": {
             "projectType": "application",
             "schematics": {
                 "@schematics/angular:component": {
@@ -18,7 +18,7 @@
                 "build": {
                     "builder": "@angular-devkit/build-angular:application",
                     "options": {
-                        "outputPath": "dist/m8m-frontend",
+                        "outputPath": "dist/UPIAA-frontend",
                         "index": "src/index.html",
                         "browser": "src/main.ts",
                         "polyfills": [
@@ -75,10 +75,10 @@
                     "builder": "@angular-devkit/build-angular:dev-server",
                     "configurations": {
                         "production": {
-                            "buildTarget": "m8m-frontend:build:production"
+                            "buildTarget": "UPIAA-frontend:build:production"
                         },
                         "development": {
-                            "buildTarget": "m8m-frontend:build:development"
+                            "buildTarget": "UPIAA-frontend:build:development"
                         }
                     },
                     "defaultConfiguration": "development",
