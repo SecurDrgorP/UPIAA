@@ -653,6 +653,93 @@ export class CanvasComponent implements OnInit, OnDestroy {
     }
 
     /* ═══════════════════════════════════════════════════════════
+       Canvas Navigation: Fit / Zoom
+       ═══════════════════════════════════════════════════════════ */
+
+    /** Animate pan + zoom so every node fits comfortably in the viewport. */
+    fitToView(): void {
+        const realNodes = this.nodes.filter(
+            n => n.data.type !== 'comment' && n.data.type !== 'group'
+        );
+        // If no real nodes, include comments/groups; if still empty, just reset.
+        const targets = realNodes.length > 0 ? realNodes : this.nodes;
+        if (targets.length === 0) {
+            this.panX = 0;
+            this.panY = 0;
+            this.zoom = 1;
+            return;
+        }
+
+        // Compute bounding box of all target nodes
+        let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+        for (const n of targets) {
+            const x = n.position?.x ?? 0;
+            const y = n.position?.y ?? 0;
+            const w = this.getNodeWidth(n);
+            const h = this.getNodeHeight(n);
+            if (x < minX) minX = x;
+            if (y < minY) minY = y;
+            if (x + w > maxX) maxX = x + w;
+            if (y + h > maxY) maxY = y + h;
+        }
+
+        const contentW = maxX - minX;
+        const contentH = maxY - minY;
+
+        // Available viewport (subtract some padding for the command bar and bottom toolbar)
+        const el = this.canvasEl.nativeElement;
+        const vpW = el.clientWidth - 100;   // 50px padding each side
+        const vpH = el.clientHeight - 160;  // room for top bar + bottom toolbar
+
+        // Scale to fit, clamped to [0.3, 1.5] — never zoom in past 150%
+        const scaleX = vpW / Math.max(contentW, 1);
+        const scaleY = vpH / Math.max(contentH, 1);
+        const targetZoom = Math.min(1.5, Math.max(0.3, Math.min(scaleX, scaleY)));
+
+        // Center the content in the viewport
+        const centerX = (minX + maxX) / 2;
+        const centerY = (minY + maxY) / 2;
+        const targetPanX = (el.clientWidth / 2) - (centerX * targetZoom);
+        const targetPanY = (el.clientHeight / 2) - (centerY * targetZoom);
+
+        // Smooth animation via requestAnimationFrame
+        const startPanX = this.panX;
+        const startPanY = this.panY;
+        const startZoom = this.zoom;
+        const duration = 350; // ms
+        const startTime = performance.now();
+
+        const easeOutCubic = (t: number) => 1 - Math.pow(1 - t, 3);
+
+        const animate = (now: number) => {
+            const elapsed = now - startTime;
+            const progress = Math.min(elapsed / duration, 1);
+            const ease = easeOutCubic(progress);
+
+            this.panX = startPanX + (targetPanX - startPanX) * ease;
+            this.panY = startPanY + (targetPanY - startPanY) * ease;
+            this.zoom = startZoom + (targetZoom - startZoom) * ease;
+
+            if (progress < 1) {
+                requestAnimationFrame(animate);
+            }
+        };
+        requestAnimationFrame(animate);
+    }
+
+    zoomIn(): void {
+        this.zoom = Math.min(2, this.zoom + 0.15);
+    }
+
+    zoomOut(): void {
+        this.zoom = Math.max(0.3, this.zoom - 0.15);
+    }
+
+    resetZoom(): void {
+        this.zoom = 1;
+    }
+
+    /* ═══════════════════════════════════════════════════════════
        Workflow Build & Execution
        ═══════════════════════════════════════════════════════════ */
 

@@ -487,10 +487,27 @@
             </div>
         </div>
 
-        <!-- Zoom indicator -->
-        <div
-            class="absolute bottom-4 right-4 z-40 glass px-3 py-1.5 rounded-lg text-xs text-surface-400 font-mono select-none">
-            {{ (zoom * 100) | number:'1.0-0' }}%
+        <!-- Zoom Controls -->
+        <div class="zoom-controls" (click)="$event.stopPropagation()">
+            <button class="zoom-btn" (click)="zoomOut()" title="Zoom Out">
+                <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M5 10a1 1 0 011-1h8a1 1 0 110 2H6a1 1 0 01-1-1z" clip-rule="evenodd"/>
+                </svg>
+            </button>
+            <button class="zoom-percent" (click)="resetZoom()" title="Reset to 100%">
+                {{ (zoom * 100) | number:'1.0-0' }}%
+            </button>
+            <button class="zoom-btn" (click)="zoomIn()" title="Zoom In">
+                <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clip-rule="evenodd"/>
+                </svg>
+            </button>
+            <div class="zoom-divider"></div>
+            <button class="zoom-btn zoom-btn-fit" (click)="fitToView()" title="Fit to View">
+                <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"></path>
+                </svg>
+            </button>
         </div>
     </div>
 

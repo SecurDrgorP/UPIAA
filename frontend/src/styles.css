@@ -1964,4 +1964,117 @@ body {
   }
 }
 
+/* ─── Zoom Controls (bottom-right pill) ──────────────────────────── */
 
+.zoom-controls {
+  position: absolute;
+  bottom: 16px;
+  right: 16px;
+  z-index: 40;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 4px 5px;
+  background: rgba(10, 15, 28, 0.85);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(71, 85, 105, 0.3);
+  border-radius: 12px;
+  box-shadow:
+    0 4px 20px rgba(0, 0, 0, 0.35),
+    0 1px 0 rgba(255, 255, 255, 0.03) inset;
+}
+
+.zoom-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  border: none;
+  background: transparent;
+  color: #94a3b8;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.zoom-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #e2e8f0;
+  transform: scale(1.08);
+}
+
+.zoom-btn:active {
+  transform: scale(0.95);
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.zoom-btn-fit {
+  color: #818cf8;
+}
+
+.zoom-btn-fit:hover {
+  background: rgba(99, 102, 241, 0.15);
+  color: #a5b4fc;
+  box-shadow: 0 0 8px rgba(99, 102, 241, 0.2);
+}
+
+.zoom-percent {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 44px;
+  height: 28px;
+  padding: 0 6px;
+  border-radius: 8px;
+  border: none;
+  background: transparent;
+  color: #94a3b8;
+  font-family: 'JetBrains Mono', 'SF Mono', monospace;
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  user-select: none;
+}
+
+.zoom-percent:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: #e2e8f0;
+}
+
+.zoom-divider {
+  width: 1px;
+  height: 18px;
+  margin: 0 3px;
+  background: linear-gradient(
+    180deg,
+    transparent 0%,
+    rgba(71, 85, 105, 0.4) 30%,
+    rgba(71, 85, 105, 0.4) 70%,
+    transparent 100%
+  );
+  flex-shrink: 0;
+}
+
+/* ─── Fit View button accent in secondary toolbar ────────────────── */
+
+.toolbar-btn-fit:hover {
+  color: #818cf8 !important;
+  background: rgba(99, 102, 241, 0.08) !important;
+}
+
+.toolbar-btn-fit:hover svg {
+  filter: drop-shadow(0 0 4px rgba(99, 102, 241, 0.5));
+}
+
+/* ─── Reduced Motion ─────────────────────────────────────────────── */
+
+@media (prefers-reduced-motion: reduce) {
+  .zoom-btn,
+  .zoom-percent {
+    transition: none;
+  }
+}
