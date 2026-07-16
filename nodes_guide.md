@@ -352,9 +352,32 @@ Below is the catalog of all execution and trigger nodes, organized by functional
   - `channel_id` (string): Target channel ID.
 * **Limits**: Max 25 MB file size (Discord upload limit). Files must be under `/tmp/m8m_docs/`.
 
+#### 💬 Telegram Trigger (`telegram_trigger`)
+* **Description**: Listens for incoming Telegram messages using long-polling (`getUpdates`). Place this node at the **start** of a workflow — it blocks until a qualifying message arrives, then passes it downstream.
+* **Setup**: Talk to **@BotFather** on Telegram → create a bot → copy the token (shaped like `123456:ABC-DEF...`). Paste it into the Bot Token field, or save it once as a credential bundle and reference by Credential ID.
+* **Config Keys**:
+  - `credential_id` (string): Optional encrypted credential bundle containing `bot_token`.
+  - `bot_token` (string, secret): Manual bot token — only shown when no credential bundle is selected.
+  - `allowed_chat_ids` (string): Comma-separated list of numeric chat IDs to accept. Leave empty = accept from anyone.
+  - `allowed_usernames` (string): Comma-separated list of usernames (without @) to accept. Leave empty = accept from anyone.
+  - `filter_message_types` (select): `text` (default) or `all`. Text-only skips photos, stickers, documents.
+  - `poll_timeout` (number): Long-poll timeout in seconds (default 25, max 30).
+* **Output fields**:
+  - `message_id` (number): Telegram message ID.
+  - `chat_id` (number): Chat the message came from — pass this to `telegram_send_message` to reply.
+  - `chat_type` (string): `"private"`, `"group"`, `"supergroup"`, or `"channel"`.
+  - `from_user_id` (number): Sender's Telegram user ID.
+  - `from_username` (string): Sender's @username (if set).
+  - `from_name` (string): Sender's display name.
+  - `text` (string): The message text.
+  - `date` (number): Unix timestamp.
+  - `raw_update` (dict): Full Telegram Update object for advanced use.
+* **Typical pairing**: Wire `{{telegram_trigger.chat_id}}` into a downstream `telegram_send_message` node's Chat ID field to reply into the same conversation.
+
 #### ✈️ Telegram: Send Message (`telegram_send_message`)
 * **Description**: Sends messages to a Telegram chat.
 * **Config Keys**:
+  - `credential_id` (string): Optional encrypted credential bundle containing `bot_token`.
   - `bot_token` (string, secret) / `chat_id` (string, required, template).
   - `message` (string, required, template): Message body.
   - `parse_mode` (select): `Markdown`, `MarkdownV2`, `HTML`, or plain text.
@@ -369,7 +392,8 @@ Below is the catalog of all execution and trigger nodes, organized by functional
 #### 📎 Telegram: Send Document (`telegram_send_document`)
 * **Description**: Sends a local file as a document to a Telegram chat via multipart upload. Designed to follow document-generation nodes in the workflow.
 * **Config Keys**:
-  - `bot_token` (string, required, secret): Telegram Bot token from @BotFather.
+  - `credential_id` (string): Optional encrypted credential bundle containing `bot_token`.
+  - `bot_token` (string, secret): Manual bot token — only shown when no credential bundle is selected.
   - `chat_id` (string, required, template): Target chat, group, or channel ID.
   - `file_path` (string, required, template): Absolute path to the file. Must be under `/tmp/m8m_docs/`.
   - `caption` (string, optional, template): Caption sent with the document.

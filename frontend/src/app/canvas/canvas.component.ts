@@ -52,6 +52,10 @@ export class CanvasComponent implements OnInit, OnDestroy {
     /** Workflow validation error shown to user before execution */
     validationError: string | null = null;
 
+    /** Toast message shown after clipboard copy (shared by Copy JSON + Copy Results) */
+    copyToast: string | null = null;
+    private _copyToastTimer: ReturnType<typeof setTimeout> | null = null;
+
     /** Loaded node type catalog (used for secret stripping on export) */
     allNodeTypes: NodeTypeInfo[] = [];
 
@@ -105,6 +109,14 @@ export class CanvasComponent implements OnInit, OnDestroy {
     private nodeCounter = 0;
     private destroy$ = new Subject<void>();
     private _saveTimer: ReturnType<typeof setTimeout> | null = null;
+
+    /**
+     * Tracks nodes that reached a terminal status (success/failed/error) during
+     * the current run. Used to suppress trailing `skipped` events emitted by the
+     * graph navigator after a loop body has already successfully completed —
+     * otherwise the loop body would flash green then immediately go grey+hatched.
+     */
+    private resolvedThisRun = new Set<string>();
 
     readonly NODE_W = NODE_W;
     readonly NODE_H = NODE_H;
@@ -184,7 +196,7 @@ export class CanvasComponent implements OnInit, OnDestroy {
                             next: (status: ExecutionStatus) => {
                                 this.appendLog(status);
                                 if (status.node_id !== '__done__' && status.node_id !== 'engine') {
-                                    this.updateNodeStatus(status.node_id, status.status as ExecutionStatusType, status.result);
+                                    this.updateNodeStatus(status);
                                 }
                                 if (status.node_id === 'engine' && status.status === 'error') {
                                     this.isPublished = false;
@@ -641,6 +653,93 @@ export class CanvasComponent implements OnInit, OnDestroy {
     }
 
     /* ═══════════════════════════════════════════════════════════
+       Canvas Navigation: Fit / Zoom
+       ═══════════════════════════════════════════════════════════ */
+
+    /** Animate pan + zoom so every node fits comfortably in the viewport. */
+    fitToView(): void {
+        const realNodes = this.nodes.filter(
+            n => n.data.type !== 'comment' && n.data.type !== 'group'
+        );
+        // If no real nodes, include comments/groups; if still empty, just reset.
+        const targets = realNodes.length > 0 ? realNodes : this.nodes;
+        if (targets.length === 0) {
+            this.panX = 0;
+            this.panY = 0;
+            this.zoom = 1;
+            return;
+        }
+
+        // Compute bounding box of all target nodes
+        let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+        for (const n of targets) {
+            const x = n.position?.x ?? 0;
+            const y = n.position?.y ?? 0;
+            const w = this.getNodeWidth(n);
+            const h = this.getNodeHeight(n);
+            if (x < minX) minX = x;
+            if (y < minY) minY = y;
+            if (x + w > maxX) maxX = x + w;
+            if (y + h > maxY) maxY = y + h;
+        }
+
+        const contentW = maxX - minX;
+        const contentH = maxY - minY;
+
+        // Available viewport (subtract some padding for the command bar and bottom toolbar)
+        const el = this.canvasEl.nativeElement;
+        const vpW = el.clientWidth - 100;   // 50px padding each side
+        const vpH = el.clientHeight - 160;  // room for top bar + bottom toolbar
+
+        // Scale to fit, clamped to [0.3, 1.5] — never zoom in past 150%
+        const scaleX = vpW / Math.max(contentW, 1);
+        const scaleY = vpH / Math.max(contentH, 1);
+        const targetZoom = Math.min(1.5, Math.max(0.3, Math.min(scaleX, scaleY)));
+
+        // Center the content in the viewport
+        const centerX = (minX + maxX) / 2;
+        const centerY = (minY + maxY) / 2;
+        const targetPanX = (el.clientWidth / 2) - (centerX * targetZoom);
+        const targetPanY = (el.clientHeight / 2) - (centerY * targetZoom);
+
+        // Smooth animation via requestAnimationFrame
+        const startPanX = this.panX;
+        const startPanY = this.panY;
+        const startZoom = this.zoom;
+        const duration = 350; // ms
+        const startTime = performance.now();
+
+        const easeOutCubic = (t: number) => 1 - Math.pow(1 - t, 3);
+
+        const animate = (now: number) => {
+            const elapsed = now - startTime;
+            const progress = Math.min(elapsed / duration, 1);
+            const ease = easeOutCubic(progress);
+
+            this.panX = startPanX + (targetPanX - startPanX) * ease;
+            this.panY = startPanY + (targetPanY - startPanY) * ease;
+            this.zoom = startZoom + (targetZoom - startZoom) * ease;
+
+            if (progress < 1) {
+                requestAnimationFrame(animate);
+            }
+        };
+        requestAnimationFrame(animate);
+    }
+
+    zoomIn(): void {
+        this.zoom = Math.min(2, this.zoom + 0.15);
+    }
+
+    zoomOut(): void {
+        this.zoom = Math.max(0.3, this.zoom - 0.15);
+    }
+
+    resetZoom(): void {
+        this.zoom = 1;
+    }
+
+    /* ═══════════════════════════════════════════════════════════
        Workflow Build & Execution
        ═══════════════════════════════════════════════════════════ */
 
@@ -693,9 +792,11 @@ export class CanvasComponent implements OnInit, OnDestroy {
         this.isExecuting = true;
         this.executionLog = [];
         this.showLog = true;
+        this.resolvedThisRun.clear();
 
         this.nodes = this.nodes.map(n => ({
-            ...n, data: { ...n.data, status: 'idle' as ExecutionStatusType, result: undefined },
+            ...n, data: { ...n.data, status: 'idle' as ExecutionStatusType, result: undefined,
+                error: undefined, error_type: undefined, invalid_config_fields: undefined, duration_ms: undefined },
         }));
 
         const wfPayload = this.buildWorkflow();
@@ -709,7 +810,7 @@ export class CanvasComponent implements OnInit, OnDestroy {
                 next: (status: ExecutionStatus) => {
                     this.appendLog(status);
                     if (status.node_id !== '__done__' && status.node_id !== 'engine') {
-                        this.updateNodeStatus(status.node_id, status.status as ExecutionStatusType, status.result);
+                        this.updateNodeStatus(status);
                     }
                 },
                 error: (err: any) => { console.error('Execution error:', err); this.isExecuting = false; },
@@ -758,7 +859,7 @@ export class CanvasComponent implements OnInit, OnDestroy {
                                             next: (status: ExecutionStatus) => {
                                                 this.appendLog(status);
                                                 if (status.node_id !== '__done__' && status.node_id !== 'engine') {
-                                                    this.updateNodeStatus(status.node_id, status.status as ExecutionStatusType, status.result);
+                                                    this.updateNodeStatus(status);
                                                 }
                                                 // If engine reports error, publish has stopped
                                                 if (status.node_id === 'engine' && (status.status === 'error' || status.status === 'failed')) {
@@ -777,16 +878,72 @@ export class CanvasComponent implements OnInit, OnDestroy {
         }
     }
 
-    private updateNodeStatus(nodeId: string, status: ExecutionStatusType, result?: any): void {
+    private updateNodeStatus(statusEvent: ExecutionStatus): void {
+        const nodeId = statusEvent.node_id;
+        const status = statusEvent.status as ExecutionStatusType;
+
+        // ── Loop-body skip overwrite fix ──────────────────────────────
+        // The graph navigator pre-marks loop body nodes as skipped, then the
+        // loop runner sends real running→success events. After the loop, the
+        // outer cursor walks past those same node IDs again and emits a trailing
+        // `skipped`. Guard: once a node has reached a terminal status this run,
+        // ignore any subsequent `skipped` event for it.
+        const terminalStatuses: ExecutionStatusType[] = ['success', 'failed', 'error', 'complete'];
+        if (status === 'skipped' && this.resolvedThisRun.has(nodeId)) {
+            return;
+        }
+        if (terminalStatuses.includes(status)) {
+            this.resolvedThisRun.add(nodeId);
+        }
+        // ─────────────────────────────────────────────────────────────
+
         const idx = this.nodes.findIndex(n => n.id === nodeId);
         if (idx > -1) {
-            // Clear stale result when node starts re-running so sidebar shows fresh output
-            const clearedResult = status === 'running' ? undefined : result;
-            this.nodes[idx] = { ...this.nodes[idx], data: { ...this.nodes[idx].data, status, result: clearedResult } };
+            const isRunning = status === 'running';
+            // Clear all ephemeral execution state when a node starts re-running
+            const updatedData = {
+                ...this.nodes[idx].data,
+                status,
+                result:               isRunning ? undefined : statusEvent.result,
+                error:                isRunning ? undefined : (statusEvent.error || statusEvent.message || undefined),
+                error_type:           isRunning ? undefined : (statusEvent.error_type || undefined),
+                invalid_config_fields: isRunning ? undefined : (statusEvent.invalid_config_fields?.length ? statusEvent.invalid_config_fields : undefined),
+                duration_ms:          isRunning ? undefined : (statusEvent.result?.['__meta__']?.duration_ms ?? undefined),
+            };
+            this.nodes[idx] = { ...this.nodes[idx], data: updatedData };
             this.nodes = [...this.nodes];
             if (this.selectedNode?.id === nodeId) this.selectedNode = this.nodes[idx];
             if (this.sidebarNode?.id === nodeId) this.sidebarNode = this.nodes[idx];
         }
+    }
+
+    /* ── Node Error Accessors (used by canvas template) ──────────── */
+
+    getNodeError(node: GraphNode): string {
+        return node.data.error || '';
+    }
+
+    getNodeErrorType(node: GraphNode): string {
+        return node.data.error_type || '';
+    }
+
+    getNodeInvalidFields(node: GraphNode): string[] {
+        return node.data.invalid_config_fields || [];
+    }
+
+    getNodeDuration(node: GraphNode): string {
+        const ms = node.data.duration_ms;
+        if (ms === undefined || ms === null) return '';
+        if (ms < 1000) return `${Math.round(ms)}ms`;
+        return `${(ms / 1000).toFixed(1)}s`;
+    }
+
+    /** Format a log entry's duration from __meta__.duration_ms in the result */
+    getLogEntryDuration(entry: ExecutionStatus): string {
+        const ms = (entry.result as any)?.['__meta__']?.duration_ms;
+        if (!ms) return '';
+        if (ms < 1000) return `${Math.round(ms)}ms`;
+        return `${(ms / 1000).toFixed(1)}s`;
     }
 
     /** Append a log entry and enforce the 500-entry cap to prevent memory growth. */
@@ -1051,7 +1208,170 @@ export class CanvasComponent implements OnInit, OnDestroy {
         const wf = this.stripSecrets(this.buildWorkflow());
         const json = JSON.stringify(wf, null, 2);
         navigator.clipboard.writeText(json).then(() => {
-            console.log('Workflow JSON copied to clipboard (secrets stripped)');
+            this.showCopyToast('Workflow JSON copied!');
+        });
+    }
+
+    /* ═══════════════════════════════════════════════════════════
+       Copy Execution Results
+       ═══════════════════════════════════════════════════════════ */
+
+    /** Visible only after execution finishes (not mid-run, not while published). */
+    get hasExecutionResults(): boolean {
+        return !this.isExecuting && !this.isPublished && this.executionLog.length > 0;
+    }
+
+    /** Show a brief toast message below the command bar. */
+    private showCopyToast(message: string): void {
+        if (this._copyToastTimer) clearTimeout(this._copyToastTimer);
+        this.copyToast = message;
+        this._copyToastTimer = setTimeout(() => {
+            this.copyToast = null;
+            this._copyToastTimer = null;
+        }, 2500);
+    }
+
+    /**
+     * Truncate a result object to maxBytes when serialized.
+     * Returns the original if small enough, otherwise a truncated
+     * copy with a `_truncated: true` flag.
+     */
+    private truncateResult(result: any, maxBytes = 10240): any {
+        if (result == null) return null;
+        try {
+            const json = JSON.stringify(result);
+            if (json.length <= maxBytes) return result;
+            return { _truncated: true, _original_size: json.length, preview: json.substring(0, maxBytes) };
+        } catch {
+            return { _truncated: true, _error: 'Unserializable result' };
+        }
+    }
+
+    /**
+     * For published workflows, the execution log is one flat stream
+     * spanning many cooldown cycles. Each cycle starts with an
+     * `engine / running` entry. Slice to the most recent cycle.
+     * For one-off executions, returns all real-node log entries.
+     */
+    private getLastRunLogs(): ExecutionStatus[] {
+        const SYNTHETIC_IDS = new Set(['__done__', 'engine']);
+
+        // Check if this is/was a published workflow
+        const hasEngineEntries = this.executionLog.some(e => e.node_id === 'engine');
+
+        if (hasEngineEntries) {
+            // Find the index of the last engine "running" entry (cycle start marker)
+            let lastCycleStart = -1;
+            for (let i = this.executionLog.length - 1; i >= 0; i--) {
+                const e = this.executionLog[i];
+                if (e.node_id === 'engine' && e.status === 'running') {
+                    lastCycleStart = i;
+                    break;
+                }
+            }
+            // Slice from that boundary, then filter out synthetic entries
+            const sliced = lastCycleStart >= 0
+                ? this.executionLog.slice(lastCycleStart)
+                : this.executionLog;
+            return sliced.filter(e => !SYNTHETIC_IDS.has(e.node_id));
+        }
+
+        // One-off execution: just filter out synthetics
+        return this.executionLog.filter(e => !SYNTHETIC_IDS.has(e.node_id));
+    }
+
+    /**
+     * Build a structured JSON report of the last execution run.
+     *
+     * - Excludes comment/group nodes from all counts
+     * - Pulls input from node config (secrets stripped)
+     * - Pulls output from node.data.result (truncated to 10KB)
+     * - Cross-references error details from executionLog (not node state)
+     * - Skipped = explicitly skipped by GraphNavigator OR still idle after run
+     */
+    buildExecutionReport(): object {
+        const execNodes = this.nodes.filter(
+            n => n.data.type !== 'comment' && n.data.type !== 'group'
+        );
+
+        const lastRunLogs = this.getLastRunLogs();
+
+        // Build a map: node_id → last terminal log entry (for error details)
+        const logByNode = new Map<string, ExecutionStatus>();
+        for (const entry of lastRunLogs) {
+            // Keep overwriting — last entry wins (running → success, or running → failed)
+            logByNode.set(entry.node_id, entry);
+        }
+
+        // Strip secrets from a workflow copy for safe input extraction
+        const cleanWf = this.stripSecrets(this.buildWorkflow());
+        const cleanConfigMap = new Map<string, Record<string, any>>();
+        for (const n of cleanWf.nodes) {
+            cleanConfigMap.set(n.id, n.config);
+        }
+
+        const executedNodes: any[] = [];
+        const skippedNodes: any[] = [];
+
+        for (const node of execNodes) {
+            const status = node.data.status;
+            const logEntry = logByNode.get(node.id);
+
+            if (status === 'skipped' || status === 'idle') {
+                skippedNodes.push({
+                    node_id: node.id,
+                    label: node.label,
+                    type: node.data.type,
+                });
+                continue;
+            }
+
+            const entry: any = {
+                node_id: node.id,
+                label: node.label,
+                type: node.data.type,
+                status: status,
+                input: cleanConfigMap.get(node.id) || {},
+                output: this.truncateResult(node.data.result),
+            };
+
+            // Error details live on the log entry, not on GraphNode.data
+            if ((status === 'failed' || status === 'error') && logEntry) {
+                entry.error = logEntry.error || logEntry.message || null;
+                entry.error_type = logEntry.error_type || null;
+                if (logEntry.invalid_config_fields?.length) {
+                    entry.invalid_config_fields = logEntry.invalid_config_fields;
+                }
+            }
+
+            executedNodes.push(entry);
+        }
+
+        const succeeded = executedNodes.filter(n => n.status === 'success').length;
+        const failed = executedNodes.filter(n => n.status === 'failed' || n.status === 'error').length;
+
+        return {
+            workflow: this.workflowName,
+            workflow_id: this.workflowId,
+            timestamp: new Date().toISOString(),
+            engine: 'M8M',
+            summary: {
+                total_nodes: execNodes.length,
+                executed: executedNodes.length,
+                succeeded,
+                failed,
+                skipped: skippedNodes.length,
+            },
+            executed_nodes: executedNodes,
+            skipped_nodes: skippedNodes,
+        };
+    }
+
+    copyExecutionResults(): void {
+        const report = this.buildExecutionReport();
+        const json = JSON.stringify(report, null, 2);
+        navigator.clipboard.writeText(json).then(() => {
+            this.showCopyToast('Execution report copied!');
         });
     }
 
@@ -1116,11 +1436,6 @@ export class CanvasComponent implements OnInit, OnDestroy {
     }
 
     private normalizeImportedWorkflow(wf: any): any {
-        for (const node of wf?.nodes || []) {
-            if (node?.id === 'node_2' && node?.type === 'telegram_send_message' && node.config?.message === '{{node_3.response}}') {
-                node.config.message = '{{node_6.response}}';
-            }
-        }
         return wf;
     }
 

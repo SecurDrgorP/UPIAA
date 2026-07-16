@@ -70,26 +70,9 @@ def loads_tolerant(raw: str | bytes) -> Any:
 
 def normalize_workflow_payload(payload: Any) -> Any:
     """
-    Normalize known bad workflow payloads at ingestion time.
+    Normalize workflow payloads at ingestion time.
 
-    Fixes the Telegram demo/test workflow where node_2 sends
-    {{node_3.response}} even though the Ollama node is node_6.
+    Currently a pass-through — reserved for future structural migrations.
     """
-    if not isinstance(payload, dict):
-        return payload
-
-    workflow = payload.get("workflow") if isinstance(payload.get("workflow"), dict) else payload
-    nodes = workflow.get("nodes") if isinstance(workflow, dict) else None
-    if not isinstance(nodes, list):
-        return payload
-
-    for node in nodes:
-        if not isinstance(node, dict):
-            continue
-        if node.get("id") != "node_2" or node.get("type") != "telegram_send_message":
-            continue
-        config = node.get("config")
-        if isinstance(config, dict) and config.get("message") == "{{node_3.response}}":
-            config["message"] = "{{node_6.response}}"
-
     return payload
+

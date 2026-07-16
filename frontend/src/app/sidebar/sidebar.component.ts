@@ -229,6 +229,11 @@ export class SidebarComponent implements OnChanges {
         return field.key;
     }
 
+    /** Returns true when this field key is in the node's invalid_config_fields list */
+    isInvalidField(key: string): boolean {
+        return !!(this.node?.data?.invalid_config_fields?.includes(key));
+    }
+
     /** Toggle password visibility for a secret field */
     toggleSecretVisibility(key: string): void {
         this.secretVisibility[key] = !this.secretVisibility[key];

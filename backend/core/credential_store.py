@@ -88,7 +88,23 @@ class CredentialStore:
         if not credential_id:
             return config
 
-        fields = await self.get_fields(str(credential_id))
+        credential_id = str(credential_id).strip()
+        if not credential_id:
+            return config
+
+        # Guard: credential IDs should start with 'cred_'.  If the value looks
+        # like a bot token or API key (contains ':' or is very long without the
+        # prefix) the user probably pasted the secret into the wrong field.
+        if not credential_id.startswith("cred_"):
+            raise ValueError(
+                f"credential_id '{credential_id[:20]}...' does not look like a "
+                f"valid credential bundle ID (expected format: cred_xxxx). "
+                f"Did you paste a bot token or API key into the Credential ID "
+                f"field by mistake? Paste it into the Bot Token / API Key field "
+                f"instead, or create a credential bundle first."
+            )
+
+        fields = await self.get_fields(credential_id)
         if fields is None:
             raise ValueError(f"credential_id not found: {credential_id}")
 
